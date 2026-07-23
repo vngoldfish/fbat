@@ -1,0 +1,1273 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>fbAUTO - Python Backend Admin Panel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #060911;
+      --bg-card: rgba(15, 22, 36, 0.75);
+      --border-color: rgba(255, 255, 255, 0.08);
+      --border-glow: rgba(59, 130, 246, 0.3);
+      --accent-blue: #3b82f6;
+      --accent-indigo: #6366f1;
+      --accent-purple: #8b5cf6;
+      --accent-green: #10b981;
+      --accent-yellow: #f59e0b;
+      --accent-red: #ef4444;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+      background: radial-gradient(circle at 15% 15%, rgba(59, 130, 246, 0.12) 0%, transparent 40%),
+                  radial-gradient(circle at 85% 85%, rgba(139, 92, 246, 0.12) 0%, transparent 40%),
+                  #060911;
+      color: var(--text-main);
+      min-height: 100vh;
+      padding: 28px 20px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .app-container {
+      width: 100%;
+      max-width: 1260px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* Top Navigation Header */
+    @keyframes spinPulse {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .pulse-spinner {
+      width: 12px; height: 12px; border: 2px solid rgba(251,191,36,0.3);
+      border-top-color: #fbbf24; border-radius: 50%;
+      animation: spinPulse 0.8s linear infinite;
+    }
+
+    .header-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-card);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 16px 28px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+    }
+
+    .brand-section {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-logo {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      box-shadow: 0 6px 18px rgba(59, 130, 246, 0.35);
+    }
+
+    .brand-title h1 {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      background: linear-gradient(135deg, #ffffff, #94a3b8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .brand-title p {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .nav-tabs {
+      display: flex;
+      gap: 8px;
+      background: rgba(10, 14, 24, 0.6);
+      padding: 4px;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+    }
+
+    .nav-tab-btn {
+      padding: 8px 18px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .nav-tab-btn:hover {
+      color: #fff;
+    }
+
+    .nav-tab-btn.active {
+      color: #fff;
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+
+    /* Tab Panes */
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: grid;
+    }
+
+    .posts-grid {
+      grid-template-columns: 400px 1fr;
+      gap: 24px;
+    }
+
+    .accounts-grid {
+      grid-template-columns: 400px 1fr;
+      gap: 24px;
+    }
+
+    .logs-grid {
+      grid-template-columns: 1fr;
+      gap: 24px;
+    }
+
+    /* Cards */
+    .card {
+      background: var(--bg-card);
+      backdrop-filter: blur(20px) saturate(180%);
+      border: 1px solid var(--border-color);
+      border-radius: 22px;
+      padding: 24px;
+      box-shadow: 0 20px 48px rgba(0, 0, 0, 0.5);
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      transition: border-color 0.3s ease;
+    }
+
+    .card:hover {
+      border-color: rgba(255, 255, 255, 0.12);
+    }
+
+    .card-title {
+      font-size: 17px;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      letter-spacing: -0.2px;
+    }
+
+    .badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 12px;
+      border-radius: 8px;
+      background: rgba(59, 130, 246, 0.15);
+      color: #60a5fa;
+      border: 1px solid rgba(59, 130, 246, 0.25);
+    }
+
+    /* Form Controls */
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .form-group label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+
+    .form-control {
+      width: 100%;
+      padding: 13px 16px;
+      background: rgba(8, 12, 20, 0.75);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      color: #fff;
+      font-family: inherit;
+      font-size: 14px;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .form-control:focus {
+      outline: none;
+      border-color: var(--accent-blue);
+      box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.25);
+      background: rgba(10, 16, 28, 0.9);
+    }
+
+    textarea.form-control {
+      min-height: 110px;
+      resize: vertical;
+    }
+
+    .btn {
+      padding: 11px 20px;
+      border-radius: 12px;
+      font-family: inherit;
+      font-size: 13.5px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%);
+      color: #fff;
+      box-shadow: 0 6px 20px rgba(59, 130, 246, 0.35);
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(59, 130, 246, 0.45);
+    }
+
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.25);
+    }
+
+    .btn-danger:hover {
+      background: rgba(239, 68, 68, 0.3);
+      color: #fff;
+      transform: translateY(-1px);
+    }
+
+    .btn-xs {
+      padding: 5px 12px;
+      font-size: 11.5px;
+      border-radius: 8px;
+    }
+
+    /* List items */
+    .item-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      max-height: 620px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .item-list::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .item-list::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 6px;
+    }
+
+    .item-list::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.25);
+    }
+
+    .list-card {
+      background: rgba(10, 14, 24, 0.7);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .list-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(59, 130, 246, 0.35);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+    }
+
+    .stat-card:hover {
+      transform: translateY(-3px);
+      border-color: rgba(59, 130, 246, 0.4) !important;
+      box-shadow: 0 14px 35px rgba(0, 0, 0, 0.4) !important;
+    }
+
+    .status-badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 8px;
+    }
+
+    .status-pending { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+    .status-in_progress { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
+    .status-completed { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .status-failed { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+
+    /* Wizard Post Selector Pills */
+    .post-type-selector {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    .type-pill-btn {
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: rgba(8, 12, 20, 0.6);
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .type-pill-btn:hover {
+      color: #fff;
+      border-color: rgba(59, 130, 246, 0.4);
+      background: rgba(59, 130, 246, 0.1);
+    }
+
+    .type-pill-btn.active {
+      color: #fff;
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(139, 92, 246, 0.3));
+      border: 1px solid rgba(59, 130, 246, 0.6);
+      box-shadow: 0 4px 14px rgba(59, 130, 246, 0.25);
+    }
+
+    .preset-time-btn {
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 11.5px;
+      font-weight: 600;
+      background: rgba(255, 255, 255, 0.05);
+      color: #94a3b8;
+      border: 1px solid var(--border-color);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .preset-time-btn:hover {
+      background: rgba(59, 130, 246, 0.2);
+      color: #60a5fa;
+      border-color: rgba(59, 130, 246, 0.4);
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      padding: 14px 24px;
+      border-radius: 14px;
+      background: rgba(15, 22, 36, 0.95);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(59, 130, 246, 0.4);
+      box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6);
+      font-size: 14px;
+      font-weight: 600;
+      color: #fff;
+      display: none;
+      z-index: 100;
+    }
+
+    .toast.show { display: block; }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Navigation Header -->
+    <header class="header-nav">
+      <div class="brand-section">
+        <div class="brand-logo">🚀</div>
+        <div class="brand-title">
+          <h1>fbAUTO Web Admin Panel</h1>
+          <p>Python Backend Service Engine (Port 18923)</p>
+        </div>
+      </div>
+
+      <div class="nav-tabs">
+        <button class="nav-tab-btn active" data-tab="tabPosts">📅 Lên Lịch & Đang Chờ <span id="navPendingBadge" class="badge" style="background:rgba(245,158,11,0.2); color:#fbbf24; margin-left:4px;">0</span></button>
+        <button class="nav-tab-btn" data-tab="tabCompleted">✅ Quản Lý Bài Đã Đăng <span id="navCompletedBadge" class="badge" style="background:rgba(34,197,94,0.2); color:#4ade80; margin-left:4px;">0</span></button>
+        <button class="nav-tab-btn" data-tab="tabAccounts">👤 Tài Khoản Facebook</button>
+        <button class="nav-tab-btn" data-tab="tabLogs">📊 Nhật Ký Logs</button>
+      </div>
+    </header>
+
+    <!-- KPI Stats Overview Grid -->
+    <div class="stats-overview-grid" style="display:grid; grid-template-columns: repeat(4, 1fr); gap: 16px;">
+      <div class="stat-card" style="background:var(--bg-card); backdrop-filter:blur(16px); border:1px solid var(--border-color); border-radius:18px; padding:18px 20px; display:flex; align-items:center; gap:16px; box-shadow:0 10px 30px rgba(0,0,0,0.3); transition:all 0.3s ease;">
+        <div style="width:48px; height:48px; border-radius:14px; background:linear-gradient(135deg,rgba(59,130,246,0.2),rgba(37,99,235,0.4)); color:#60a5fa; font-size:22px; display:flex; align-items:center; justify-content:center; border:1px solid rgba(59,130,246,0.3);">📝</div>
+        <div>
+          <div style="font-size:11px; color:var(--text-muted); font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">TỔNG BÀI HỆ THỐNG</div>
+          <div style="font-size:24px; font-weight:800; color:#fff; margin-top:2px;" id="statTotalPosts">0</div>
+        </div>
+      </div>
+      <div class="stat-card" style="background:var(--bg-card); backdrop-filter:blur(16px); border:1px solid var(--border-color); border-radius:18px; padding:18px 20px; display:flex; align-items:center; gap:16px; box-shadow:0 10px 30px rgba(0,0,0,0.3); transition:all 0.3s ease;">
+        <div style="width:48px; height:48px; border-radius:14px; background:linear-gradient(135deg,rgba(245,158,11,0.2),rgba(217,119,6,0.4)); color:#fbbf24; font-size:22px; display:flex; align-items:center; justify-content:center; border:1px solid rgba(245,158,11,0.3);">⏳</div>
+        <div>
+          <div style="font-size:11px; color:var(--text-muted); font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">BÀI ĐANG CHỜ ĐĂNG</div>
+          <div style="font-size:24px; font-weight:800; color:#fbbf24; margin-top:2px;" id="statPendingPosts">0</div>
+        </div>
+      </div>
+      <div class="stat-card" style="background:var(--bg-card); backdrop-filter:blur(16px); border:1px solid var(--border-color); border-radius:18px; padding:18px 20px; display:flex; align-items:center; gap:16px; box-shadow:0 10px 30px rgba(0,0,0,0.3); transition:all 0.3s ease;">
+        <div style="width:48px; height:48px; border-radius:14px; background:linear-gradient(135deg,rgba(16,185,129,0.2),rgba(5,150,105,0.4)); color:#34d399; font-size:22px; display:flex; align-items:center; justify-content:center; border:1px solid rgba(16,185,129,0.3);">✅</div>
+        <div>
+          <div style="font-size:11px; color:var(--text-muted); font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">ĐÃ ĐĂNG THÀNH CÔNG</div>
+          <div style="font-size:24px; font-weight:800; color:#34d399; margin-top:2px;" id="statCompletedPosts">0</div>
+        </div>
+      </div>
+      <div class="stat-card" style="background:var(--bg-card); backdrop-filter:blur(16px); border:1px solid var(--border-color); border-radius:18px; padding:18px 20px; display:flex; align-items:center; gap:16px; box-shadow:0 10px 30px rgba(0,0,0,0.3); transition:all 0.3s ease;">
+        <div style="width:48px; height:48px; border-radius:14px; background:linear-gradient(135deg,rgba(139,92,246,0.2),rgba(124,58,237,0.4)); color:#c084fc; font-size:22px; display:flex; align-items:center; justify-content:center; border:1px solid rgba(139,92,246,0.3);">💬</div>
+        <div>
+          <div style="font-size:11px; color:var(--text-muted); font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">BÌNH LUẬN SEEDING</div>
+          <div style="font-size:24px; font-weight:800; color:#c084fc; margin-top:2px;" id="statSeedingCount">0</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 1: Posts Management -->
+    <div class="tab-content posts-grid active" id="tabPosts">
+      <!-- Post Creation Glass Panel -->
+      <div class="card" style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(59, 130, 246, 0.25); box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.1); border-radius: 24px; padding: 26px;">
+        <div class="card-title" style="padding-bottom:14px; border-bottom:1px solid rgba(255,255,255,0.08);">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <div style="width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg,#3b82f6,#8b5cf6); display:flex; align-items:center; justify-content:center; font-size:18px; box-shadow:0 4px 14px rgba(59,130,246,0.4);">✨</div>
+            <div>
+              <div style="font-size:17px; font-weight:800; color:#fff; letter-spacing:-0.2px;">Lên Lịch Bài Đăng Mới</div>
+              <div style="font-size:11.5px; color:var(--text-muted); font-weight:500;">Tự động đăng ngầm qua Facebook Direct GraphQL API</div>
+            </div>
+          </div>
+          <span class="badge" style="background:rgba(59,130,246,0.2); color:#60a5fa; border:1px solid rgba(59,130,246,0.4); padding:4px 10px; font-weight:700;">⚡ DIRECT API</span>
+        </div>
+
+        <form id="formPost" onsubmit="return false;" style="display:flex; flex-direction:column; gap:16px; margin-top:8px;">
+          <!-- Hidden select for compatibility -->
+          <select id="postType" style="display:none;">
+            <option value="post" selected>post</option>
+            <option value="video">video</option>
+            <option value="reel">reel</option>
+            <option value="story">story</option>
+          </select>
+
+          <!-- SUB-PANEL 1: Format Selector -->
+          <div style="background:rgba(10, 16, 28, 0.6); border:1px solid rgba(255,255,255,0.06); border-radius:16px; padding:16px; display:flex; flex-direction:column; gap:10px;">
+            <label style="color:#818cf8; font-weight:800; display:flex; align-items:center; gap:8px; font-size:12px; letter-spacing:0.5px;">
+              <span>1️⃣ CHỌN ĐỊNH DẠNG BÀI VIẾT</span>
+            </label>
+            <div class="post-type-selector">
+              <button type="button" class="type-pill-btn active" data-type="post" onclick="selectPostTypePill('post', this)">
+                <span>📝</span> Feed Post
+              </button>
+              <button type="button" class="type-pill-btn" data-type="video" onclick="selectPostTypePill('video', this)">
+                <span>🎥</span> Video
+              </button>
+              <button type="button" class="type-pill-btn" data-type="reel" onclick="selectPostTypePill('reel', this)">
+                <span>🎬</span> Reels
+              </button>
+              <button type="button" class="type-pill-btn" data-type="story" onclick="selectPostTypePill('story', this)">
+                <span>📲</span> Story
+              </button>
+            </div>
+          </div>
+
+          <!-- SUB-PANEL 2: Content & Media Upload -->
+          <div style="background:rgba(10, 16, 28, 0.6); border:1px solid rgba(255,255,255,0.06); border-radius:16px; padding:16px; display:flex; flex-direction:column; gap:12px;">
+            <label for="postContent" style="color:#818cf8; font-weight:800; display:flex; align-items:center; gap:8px; font-size:12px; letter-spacing:0.5px;">
+              <span>2️⃣ NỘI DUNG & TỆP ĐÍNH KÈM</span>
+            </label>
+            <textarea id="postContent" class="form-control" placeholder="Nhập nội dung bài viết, caption hoặc mô tả sản phẩm ở đây..." style="min-height:100px; font-size:13.5px; line-height:1.5;"></textarea>
+
+            <div id="mediaDropZone" onclick="document.getElementById('mediaFileInput').click()" style="
+              border: 2px dashed rgba(59,130,246,0.45); border-radius: 14px; padding: 20px 14px;
+              text-align: center; cursor: pointer; transition: all 0.3s ease;
+              background: linear-gradient(135deg, rgba(59,130,246,0.08), rgba(139,92,246,0.06));
+              min-height: 90px;
+              display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+            ">
+              <div id="mediaPreview" style="display:none; width:100%; max-height:160px; overflow:hidden; border-radius:10px; margin-bottom:6px;"></div>
+              <div id="mediaDropText">
+                <div style="
+                  display:inline-flex; align-items:center; gap:8px;
+                  padding: 9px 18px; border-radius: 10px;
+                  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+                  color: #fff; font-weight: 700; font-size: 13px;
+                  box-shadow: 0 4px 14px rgba(59,130,246,0.35);
+                  transition: transform 0.2s;
+                ">📤 Chọn Tệp Ảnh / Video Từ Máy</div>
+                <div style="font-size:11.5px; color:var(--text-muted); margin-top:6px;">hoặc <b>kéo thả file</b> trực tiếp vào khung này</div>
+              </div>
+              <input type="file" id="mediaFileInput" accept="image/*,video/*" style="display:none;" onchange="handleAdminMediaFile(this.files[0])">
+            </div>
+            <div id="mediaFileInfo" style="display:none; padding:10px 14px; background:rgba(59,130,246,0.12); border:1px solid rgba(59,130,246,0.3); border-radius:10px; align-items:center; justify-content:space-between;">
+              <span id="mediaFileName" style="font-size:12.5px; color:#60a5fa; font-weight:600;"></span>
+              <button type="button" onclick="clearAdminMedia()" style="background:rgba(239,68,68,0.2); border:1px solid rgba(239,68,68,0.4); color:#f87171; cursor:pointer; font-size:11.5px; font-weight:700; padding:4px 10px; border-radius:6px; margin-left:10px;">✕ Xóa File</button>
+            </div>
+
+            <input type="url" id="postMediaUrl" class="form-control" style="font-size:12px; padding:10px 14px;" placeholder="🔗 Hoặc dán Link URL Media trực tiếp (https://...)">
+          </div>
+
+          <!-- SUB-PANEL 3: Target Channel & Seeding -->
+          <div style="background:rgba(10, 16, 28, 0.6); border:1px solid rgba(255,255,255,0.06); border-radius:16px; padding:16px; display:flex; flex-direction:column; gap:12px;">
+            <label style="color:#818cf8; font-weight:800; display:flex; align-items:center; gap:8px; font-size:12px; letter-spacing:0.5px;">
+              <span>3️⃣ KÊNH ĐĂNG & SEEDING BÌNH LUẬN</span>
+            </label>
+            <div style="display:grid; grid-template-columns: 140px 1fr; gap:10px;">
+              <select id="postTargetType" class="form-control" style="font-size:12.5px; padding:10px 12px;">
+                <option value="profile">👤 Cá Nhân</option>
+                <option value="page">🚩 Fanpage</option>
+                <option value="group">👨‍👩‍👧‍👦 Group</option>
+              </select>
+              <input type="text" id="postTargetId" class="form-control" style="font-size:12.5px; padding:10px 12px;" placeholder="Nhập ID Fanpage / ID Group (Để trống nếu đăng cá nhân)">
+            </div>
+            <textarea id="postSeedingComments" class="form-control" rows="2" style="font-size:12px;" placeholder="💬 Nhập bình luận tự động seeding ngay sau khi đăng (Mỗi câu 1 dòng)..."></textarea>
+          </div>
+
+          <!-- SUB-PANEL 4: Schedule Timer & Submit -->
+          <div style="background:rgba(10, 16, 28, 0.6); border:1px solid rgba(255,255,255,0.06); border-radius:16px; padding:16px; display:flex; flex-direction:column; gap:12px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <label for="postScheduledTime" style="color:#818cf8; font-weight:800; font-size:12px; letter-spacing:0.5px;">4️⃣ THỜI GIAN ĐĂNG BÀI</label>
+              <div style="display:flex; gap:6px;">
+                <button type="button" class="preset-time-btn" onclick="setPresetSchedule(0)">⚡ Đăng Ngay</button>
+                <button type="button" class="preset-time-btn" onclick="setPresetSchedule(5)">+5 Phút</button>
+                <button type="button" class="preset-time-btn" onclick="setPresetSchedule(30)">+30 Phút</button>
+              </div>
+            </div>
+            <input type="datetime-local" id="postScheduledTime" class="form-control" required style="font-size:13px;">
+          </div>
+
+          <input type="hidden" id="postAccessToken" value="">
+          <input type="hidden" id="postRepeat" value="0">
+
+          <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 4px; padding: 15px; font-size: 15px; font-weight: 800; background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #6366f1 100%); box-shadow: 0 10px 30px rgba(59,130,246,0.45); border-radius: 16px; letter-spacing: 0.3px;">
+            <span>🚀</span> PHÁT LỆNH ĐĂNG BÀI BẮT ĐẦU NGAY (DIRECT API)
+          </button>
+        </form>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <span>📋 Danh Sách Bài Đăng</span>
+          <span class="badge" id="postsCount">0 bài</span>
+        </div>
+
+        <div class="item-list" id="postsList">
+          <div style="text-align: center; padding: 40px; color: var(--text-dim);">Đang tải dữ liệu bài đăng...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 2: Published Posts Management -->
+    <div class="tab-content logs-grid" id="tabCompleted">
+      <div class="card">
+        <div class="card-title">
+          <span>🌐 Quản Lý Bài Viết & Bài Đã Đăng Trên Facebook</span>
+          <span class="badge" id="completedCount" style="background:rgba(34,197,94,0.2); color:#4ade80; border:1px solid rgba(34,197,94,0.4);">0 bài đã đăng</span>
+        </div>
+
+        <div style="display:flex; gap:10px; margin-bottom:10px; align-items:center;">
+          <input type="text" id="searchCompleted" class="form-control" style="flex:1;" placeholder="🔍 Tìm kiếm bài viết theo nội dung, mã ID..." oninput="renderPosts(_allPostsCache)">
+          <select id="filterStatus" class="form-control" style="width:200px;" onchange="renderPosts(_allPostsCache)">
+            <option value="completed" selected>✅ Bài đã đăng thành công</option>
+            <option value="all">🌐 Tất cả danh sách bài viết</option>
+            <option value="failed">❌ Bài bị lỗi / thất bại</option>
+            <option value="pending">⏳ Bài đang chờ / đang chạy</option>
+          </select>
+        </div>
+
+        <div class="item-list" id="completedList">
+          <div style="text-align: center; padding: 40px; color: var(--text-dim);">Chưa có bài đăng nào trùng khớp bộ lọc.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 2: Accounts Management -->
+    <div class="tab-content accounts-grid" id="tabAccounts">
+      <div class="card">
+        <div class="card-title">
+          <span>👤 Thêm Tài Khoản / Fanpage</span>
+        </div>
+
+        <form id="formAccount" onsubmit="return false;">
+          <div class="form-group">
+            <label for="accName">Tên Tài Khoản / Trang</label>
+            <input type="text" id="accName" class="form-control" placeholder="Fanpage Bán Hàng" required>
+          </div>
+
+          <div class="form-group">
+            <label for="accType">Loại đối tượng</label>
+            <select id="accType" class="form-control">
+              <option value="page">Fanpage</option>
+              <option value="group">Nhóm (Group)</option>
+              <option value="user">Trang Cá Nhân (Profile)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="accTargetId">Facebook Target ID</label>
+            <input type="text" id="accTargetId" class="form-control" placeholder="ID Trang hoặc ID Nhóm">
+          </div>
+
+          <div class="form-group">
+            <label for="accToken">Access Token</label>
+            <textarea id="accToken" class="form-control" style="min-height: 80px;" placeholder="Nhập User hoặc Page Access Token..." required></textarea>
+          </div>
+
+          <button type="submit" class="btn btn-primary" style="width: 100%;">
+            <span>➕</span> Thêm Tài Khoản
+          </button>
+        </form>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <span>Danh Sách Tài Khoản & Access Tokens</span>
+          <span class="badge" id="accountsCount">0 tài khoản</span>
+        </div>
+
+        <div class="item-list" id="accountsList">
+          <div style="text-align: center; padding: 40px; color: var(--text-dim);">Chưa có tài khoản nào được lưu.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 3: System Logs -->
+    <div class="tab-content logs-grid" id="tabLogs">
+      <div class="card">
+        <div class="card-title">
+          <span>📊 Nhật Ký Hoạt Động Hệ Thống (Logs)</span>
+          <button class="btn btn-xs btn-primary" id="btnRefreshLogs">🔄 Làm Mới Logs</button>
+        </div>
+
+        <div class="item-list" id="logsList">
+          <div style="text-align: center; padding: 40px; color: var(--text-dim);">Đang tải logs...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      initTabs();
+      setDefaultDateTime();
+      loadPosts();
+      loadAccounts();
+      loadLogs();
+
+      document.getElementById('formPost').addEventListener('submit', handleAddPost);
+      document.getElementById('formAccount').addEventListener('submit', handleAddAccount);
+      document.getElementById('btnRefreshLogs').addEventListener('click', loadLogs);
+
+      // Auto-refresh post list and system logs every 2s to reflect live status changes
+      setInterval(() => {
+        loadPosts();
+        loadLogs();
+      }, 2000);
+    });
+
+    function initTabs() {
+      const tabBtns = document.querySelectorAll('.nav-tab-btn');
+      const tabContents = document.querySelectorAll('.tab-content');
+
+      tabBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          tabBtns.forEach(b => b.classList.remove('active'));
+          tabContents.forEach(c => c.classList.remove('active'));
+
+          const targetTabId = btn.getAttribute('data-tab');
+          btn.classList.add('active');
+          document.getElementById(targetTabId).classList.add('active');
+        });
+      });
+    }
+
+    function selectPostTypePill(type, btn) {
+      document.querySelectorAll('.type-pill-btn').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+      const select = document.getElementById('postType');
+      if (select) select.value = type;
+    }
+
+    function setPresetSchedule(minutesAdd) {
+      const input = document.getElementById('postScheduledTime');
+      const now = new Date();
+      now.setMinutes(now.getMinutes() + minutesAdd);
+      const localIso = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+      input.value = localIso;
+    }
+
+    function setDefaultDateTime() {
+      setPresetSchedule(5);
+    }
+
+    const API_BASE = (window.location.protocol && window.location.protocol.startsWith('http')) 
+      ? (window.location.origin || (window.location.protocol + '//' + window.location.host)) 
+      : 'http://127.0.0.1:18923';
+    let _allPostsCache = [];
+
+    async function loadPosts() {
+      try {
+        const res = await fetch(`${API_BASE}/api/posts`);
+        if (!res.ok) return;
+        const data = await res.json();
+        _allPostsCache = Array.isArray(data) ? data : (data.posts || []);
+        
+        // Update KPI Statistics
+        const total = _allPostsCache.length;
+        const pending = _allPostsCache.filter(p => p.status === 'pending' || p.status === 'in_progress').length;
+        const completed = _allPostsCache.filter(p => p.status === 'completed').length;
+        const seedingTotal = _allPostsCache.reduce((acc, p) => acc + (p.seedingComments ? p.seedingComments.length : 0), 0);
+
+        const elTotal = document.getElementById('statTotalPosts');
+        const elPending = document.getElementById('statPendingPosts');
+        const elCompleted = document.getElementById('statCompletedPosts');
+        const elSeeding = document.getElementById('statSeedingCount');
+        if (elTotal) elTotal.textContent = total;
+        if (elPending) elPending.textContent = pending;
+        if (elCompleted) elCompleted.textContent = completed;
+        if (elSeeding) elSeeding.textContent = seedingTotal;
+
+        renderPosts(_allPostsCache);
+      } catch (e) {
+        console.warn("loadPosts status:", e.message);
+      }
+    }
+
+    function getTypeBadge(type) {
+      const types = {
+        post: '📝 Bài viết',
+        video: '🎥 Video',
+        reel: '🎬 Thước phim',
+        story: '📲 Bản tin'
+      };
+      return types[type] || '📝 Bài viết';
+    }
+
+    function renderPostCard(p) {
+      if (!p) return '';
+      try {
+        const safeId = (p.id && typeof p.id === 'string') ? p.id : String(p.id || '');
+        const displayId = safeId.length > 16 ? safeId.substring(0, 16) : safeId;
+        let actionBtn = '';
+        let statusBadgeHtml = '';
+
+        if (p.status === 'completed') {
+          statusBadgeHtml = `<span class="status-badge status-completed" style="background:rgba(34,197,94,0.15); color:#4ade80; border:1px solid rgba(34,197,94,0.3);">✅ Hoàn thành</span>`;
+          actionBtn = `<button class="btn btn-xs btn-primary" style="background:linear-gradient(135deg,#3b82f6,#8b5cf6);" onclick="runPostNow('${safeId}')">🔄 Đăng Lại</button>`;
+        } else if (p.status === 'failed') {
+          statusBadgeHtml = `<span class="status-badge status-failed" style="background:rgba(239,68,68,0.15); color:#f87171; border:1px solid rgba(239,68,68,0.3);">❌ Thất bại</span>`;
+          actionBtn = `<button class="btn btn-xs btn-primary" style="background:linear-gradient(135deg,#3b82f6,#8b5cf6);" onclick="runPostNow('${safeId}')">🔄 Thử Lại</button>`;
+        } else if (p.status === 'in_progress') {
+          statusBadgeHtml = `<span class="status-badge status-in_progress" style="background:rgba(245,158,11,0.15); color:#fbbf24; border:1px solid rgba(245,158,11,0.3); display:flex; align-items:center; gap:5px;"><div class="pulse-spinner"></div>⚡ Đang chạy</span>`;
+          actionBtn = `<button class="btn btn-xs btn-primary" disabled style="opacity:0.7;">⏳ Đang Đăng...</button>`;
+        } else {
+          statusBadgeHtml = `<span class="status-badge status-pending" style="background:rgba(148,163,184,0.15); color:#cbd5e1; border:1px solid rgba(148,163,184,0.3);">⏳ Đang chờ</span>`;
+          actionBtn = `<button class="btn btn-xs btn-primary" onclick="runPostNow('${safeId}')">⚡ Đăng Ngay</button>`;
+        }
+
+        let stepBoxStyle = "background:rgba(59,130,246,0.12); border:1px solid rgba(59,130,246,0.3); color:#60a5fa;";
+        if (p.status === 'completed') {
+          stepBoxStyle = "background:rgba(34,197,94,0.12); border:1px solid rgba(34,197,94,0.3); color:#4ade80;";
+        } else if (p.status === 'failed') {
+          stepBoxStyle = "background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.3); color:#f87171;";
+        }
+
+        const scheduledTimeStr = p.scheduledTime ? new Date(p.scheduledTime).toLocaleString('vi-VN') : 'Mới tạo';
+
+        return `
+        <div class="list-card" style="${p.status === 'in_progress' ? 'border: 1px solid rgba(59,130,246,0.4); box-shadow: 0 0 15px rgba(59,130,246,0.15);' : (p.status === 'completed' ? 'border: 1px solid rgba(34,197,94,0.25);' : '')}">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+              <span class="badge" style="background:rgba(99,102,241,0.2); color:#818cf8; border-color:rgba(99,102,241,0.3);">${getTypeBadge(p.postType)}</span>
+              <span class="badge" style="background:rgba(236,72,153,0.2); color:#f472b6; border-color:rgba(236,72,153,0.3);">${p.targetType === 'page' ? '🚩 Fanpage' : (p.targetType === 'group' ? '👨‍👩‍👧‍👦 Group' : '👤 Profile')}</span>
+              <span style="font-size:12px; color:var(--text-muted);">⏰ ${scheduledTimeStr}</span>
+            </div>
+            ${statusBadgeHtml}
+          </div>
+          <div style="font-size:14px; color:#fff; margin-top:6px; font-weight:500;">${escapeHtml(p.content)}</div>
+          ${p.mediaData ? `<div style="font-size:11px; color:#a78bfa; margin-top:4px;">📎 File đính kèm: ${escapeHtml(p.mediaData.fileName)} (${(p.mediaData.size / (1024*1024)).toFixed(1)} MB)</div>` : ''}
+          ${p.mediaUrl && !p.mediaData ? `<div style="font-size:11px; color:#60a5fa; word-break:break-all; margin-top:4px;">🖼️ URL Media: ${escapeHtml(p.mediaUrl)}</div>` : ''}
+          ${p.seedingComments && p.seedingComments.length ? `<div style="font-size:11px; color:#34d399; margin-top:4px;">💬 ${p.seedingComments.length} bình luận seeding tự động</div>` : ''}
+
+          <!-- Metrics Badges -->
+          <div style="display:flex; gap:12px; margin-top:6px; font-size:12px; color:var(--text-muted); background:rgba(255,255,255,0.03); padding:6px 12px; border-radius:8px; width:fit-content; border:1px solid var(--border-color);">
+            <span>👍 <b>${p.metrics ? (p.metrics.likes || 0) : 0}</b></span>
+            <span>💬 <b>${p.metrics ? (p.metrics.comments || 0) : 0}</b></span>
+            <span>🔁 <b>${p.metrics ? (p.metrics.shares || 0) : 0}</b></span>
+          </div>
+
+          <!-- Live Step Banner -->
+          ${p.progressStep ? `
+            <div style="margin-top:8px; padding:10px 14px; border-radius:10px; font-size:12px; font-weight:600; ${stepBoxStyle} display:flex; align-items:center; gap:8px;">
+              ${p.status === 'in_progress' ? '<div class="pulse-spinner"></div>' : ''}
+              <span>${escapeHtml(p.progressStep)}</span>
+            </div>
+          ` : ''}
+
+          <!-- Direct Facebook Post Link -->
+          ${(p.fbPostUrl || p.fbPostId) ? `
+            <div style="margin-top:8px;">
+              <a href="${escapeHtml(p.fbPostUrl || ((p.fbPostId && p.fbPostId.startsWith('pfbid')) ? ('https://www.facebook.com/posts/' + p.fbPostId) : ((p.fbPostId && p.fbPostId.length > 5) ? ('https://www.facebook.com/photo/?fbid=' + p.fbPostId) : 'https://www.facebook.com/me')))}" target="_blank" rel="noopener" class="btn btn-xs" style="background:linear-gradient(135deg,#10b981,#059669); color:#fff; font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:8px; box-shadow:0 3px 10px rgba(16,185,129,0.35);">
+                🔗 Mở Bài Viết Trực Tiếp Trên Facebook (ID: ${escapeHtml(p.fbPostId)})
+              </a>
+            </div>
+          ` : (p.status === 'completed' ? `
+            <div style="margin-top:8px;">
+              <a href="${escapeHtml(p.targetUrl || (p.targetId ? ('https://www.facebook.com/' + p.targetId) : 'https://www.facebook.com/me'))}" target="_blank" rel="noopener" class="btn btn-xs" style="background:linear-gradient(135deg,#10b981,#059669); color:#fff; font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:8px; box-shadow:0 3px 10px rgba(16,185,129,0.35);">
+                🔗 Mở Trang Facebook Đã Đăng Bài Thành Công
+              </a>
+            </div>
+          ` : '')}
+
+          ${p.lastError && p.status !== 'completed' ? `<div style="font-size:11px; color:#f87171; margin-top:6px; background:rgba(239,68,68,0.1); padding:6px 10px; border-radius:8px; border:1px solid rgba(239,68,68,0.2);">⚠️ Chi tiết lỗi: ${escapeHtml(p.lastError)}</div>` : ''}
+
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; padding-top:8px; border-top:1px solid var(--border-color);">
+            <span style="font-size:11px; color:var(--text-dim);">
+              ID: ${displayId} ${p.fbPostId ? `• FB ID: <strong style="color:#34d399;">${escapeHtml(p.fbPostId)}</strong>` : ''} ${p.executionMethod ? `• Method: ${p.executionMethod.toUpperCase()}` : ''}
+            </span>
+            <div style="display:flex; gap:6px;">
+              ${actionBtn}
+              <button class="btn btn-xs" style="background:rgba(255,255,255,0.08); color:#ccc;" onclick="duplicatePost('${safeId}')">📋 Nhân Bản</button>
+              <button class="btn btn-xs btn-danger" onclick="deletePost('${safeId}')">🗑️ Xóa</button>
+            </div>
+          </div>
+        </div>
+      `;
+      } catch (e) {
+        console.error("renderPostCard error:", e);
+        return '';
+      }
+    }
+
+    function renderPosts(posts) {
+      const pendingList = posts.filter(p => p.status !== 'completed');
+      const completedList = posts.filter(p => p.status === 'completed');
+
+      // Badges
+      document.getElementById('postsCount').textContent = `${pendingList.length} bài`;
+      document.getElementById('completedCount').textContent = `${completedList.length} bài đã đăng`;
+      document.getElementById('navPendingBadge').textContent = pendingList.length;
+      document.getElementById('navCompletedBadge').textContent = completedList.length;
+
+      // Render Tab 1: Pending & Running Posts
+      const pendingContainer = document.getElementById('postsList');
+      if (pendingList.length === 0) {
+        pendingContainer.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-dim);">Không có bài đăng nào đang chờ hoặc đang chạy.</div>';
+      } else {
+        pendingContainer.innerHTML = pendingList.map(renderPostCard).join('');
+      }
+
+      // Render Tab 2: Published Posts / Executed Posts with Status & Search Filters
+      const searchQuery = (document.getElementById('searchCompleted')?.value || '').toLowerCase().trim();
+      const filterStatus = document.getElementById('filterStatus')?.value || 'completed';
+
+      let targetCompletedList = completedList;
+      if (filterStatus === 'all') {
+        targetCompletedList = posts;
+      } else if (filterStatus === 'failed') {
+        targetCompletedList = posts.filter(p => p.status === 'failed');
+      } else if (filterStatus === 'pending') {
+        targetCompletedList = pendingList;
+      }
+
+      if (searchQuery) {
+        targetCompletedList = targetCompletedList.filter(p =>
+          (p.content || '').toLowerCase().includes(searchQuery) ||
+          (p.fbPostId || '').toLowerCase().includes(searchQuery) ||
+          (p.id || '').toLowerCase().includes(searchQuery)
+        );
+      }
+
+      const completedContainer = document.getElementById('completedList');
+      if (targetCompletedList.length === 0) {
+        completedContainer.innerHTML = searchQuery
+          ? '<div style="text-align: center; padding: 40px; color: var(--text-dim);">Không tìm thấy bài viết trùng khớp tìm kiếm.</div>'
+          : '<div style="text-align: center; padding: 40px; color: var(--text-dim);">Chưa có bài viết nào thuộc danh mục này.</div>';
+      } else {
+        completedContainer.innerHTML = targetCompletedList.map(renderPostCard).join('');
+      }
+    }
+
+    async function handleAddPost(e) {
+      if (e) e.preventDefault();
+      const postType = document.getElementById('postType').value || 'post';
+      const content = document.getElementById('postContent').value.trim();
+      const mediaUrl = document.getElementById('postMediaUrl').value.trim();
+      const targetType = document.getElementById('postTargetType').value || 'profile';
+      const targetId = document.getElementById('postTargetId').value.trim();
+      const accessToken = document.getElementById('postAccessToken')?.value?.trim() || '';
+      const scheduledTimeRaw = document.getElementById('postScheduledTime').value;
+      const scheduledTime = scheduledTimeRaw ? new Date(scheduledTimeRaw).getTime() : Date.now();
+      const repeatIntervalMinutes = document.getElementById('postRepeat')?.value || 0;
+
+      const seedingRaw = document.getElementById('postSeedingComments').value || '';
+      const seedingComments = seedingRaw.split('\n').map(s => s.trim()).filter(Boolean);
+
+      if (!content && !mediaUrl && !_adminMediaData) {
+        showToast('⚠️ Vui lòng nhập nội dung, chọn file, hoặc nhập URL Media!');
+        return;
+      }
+
+      const postData = {
+        postType, content, mediaUrl, targetType, targetId, seedingComments, accessToken, scheduledTime, repeatIntervalMinutes
+      };
+
+      // Include media file data if selected
+      if (_adminMediaData) {
+        postData.mediaData = _adminMediaData;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/api/posts`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(postData)
+        });
+
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+          showToast('🚀 Đã khởi tạo và phát lệnh đăng bài thành công!');
+          document.getElementById('postContent').value = '';
+          document.getElementById('postMediaUrl').value = '';
+          clearAdminMedia();
+          setDefaultDateTime();
+          if (data.post && data.post.id && (scheduledTime <= Date.now() + 60000)) {
+            await runPostNow(data.post.id);
+          } else {
+            loadPosts();
+          }
+        } else {
+          showToast(`❌ Lỗi: ${data.error || 'Không thể lưu lịch đăng'}`);
+        }
+      } catch (err) {
+        showToast(`❌ Lỗi kết nối: ${err.message}`);
+      }
+    }
+
+    async function runPostNow(id) {
+      await fetch(`${API_BASE}/api/posts/${id}/run-now`, { method: 'POST' });
+      showToast('Đã phát lệnh đăng ngay!');
+      setTimeout(loadPosts, 1000);
+    }
+
+    async function deletePost(id) {
+      await fetch(`${API_BASE}/api/posts/${id}`, { method: 'DELETE' });
+      showToast('Đã xóa bài đăng!');
+      loadPosts();
+    }
+
+    async function duplicatePost(id) {
+      try {
+        const res = await fetch(`${API_BASE}/api/posts`);
+        const data = await res.json();
+        const post = (data.posts || []).find(p => p.id === id);
+        if (post) {
+          document.getElementById('postType').value = post.postType || 'post';
+          document.getElementById('postContent').value = post.content || '';
+          document.getElementById('postMediaUrl').value = post.mediaUrl || '';
+          document.getElementById('postTargetId').value = post.targetId || '';
+          document.getElementById('postAccessToken').value = post.accessToken || '';
+          if (post.mediaData) {
+            _adminMediaData = post.mediaData;
+            const fileInfo = document.getElementById('mediaFileInfo');
+            const fileName = document.getElementById('mediaFileName');
+            if (fileInfo && fileName) {
+              fileName.textContent = `📎 ${post.mediaData.fileName} (Đã nhân bản)`;
+              fileInfo.style.display = 'flex';
+            }
+            const dropText = document.getElementById('mediaDropText');
+            if (dropText) dropText.style.display = 'none';
+          }
+          showToast('📋 Đã nạp dữ liệu bài đăng vào form!');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      } catch (e) {}
+    }
+
+    async function loadAccounts() {
+      try {
+        const res = await fetch(`${API_BASE}/api/accounts`);
+        const data = await res.json();
+        renderAccounts(data.accounts || []);
+      } catch (e) {}
+    }
+
+    function renderAccounts(accounts) {
+      const container = document.getElementById('accountsList');
+      document.getElementById('accountsCount').textContent = `${accounts.length} tài khoản`;
+
+      if (accounts.length === 0) {
+        container.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-dim);">Chưa có tài khoản nào.</div>';
+        return;
+      }
+
+      container.innerHTML = accounts.map(a => `
+        <div class="list-card">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <strong style="color:#fff; font-size:14px;">${escapeHtml(a.name)}</strong>
+            <span class="badge">${a.type}</span>
+          </div>
+          <div style="font-size:11px; color:var(--text-muted); word-break:break-all;">Target ID: ${escapeHtml(a.targetId || 'N/A')}</div>
+          <div style="display:flex; justify-content:flex-end; margin-top:4px;">
+            <button class="btn btn-xs btn-danger" onclick="deleteAccount('${a.id}')">Xóa</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function handleAddAccount(e) {
+      e.preventDefault();
+      const name = document.getElementById('accName').value.trim();
+      const type = document.getElementById('accType').value;
+      const targetId = document.getElementById('accTargetId').value.trim();
+      const accessToken = document.getElementById('accToken').value.trim();
+
+      const res = await fetch(`${API_BASE}/api/accounts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, type, targetId, accessToken })
+      });
+
+      if (res.ok) {
+        showToast('Đã thêm tài khoản thành công!');
+        document.getElementById('accName').value = '';
+        document.getElementById('accTargetId').value = '';
+        document.getElementById('accToken').value = '';
+        loadAccounts();
+      }
+    }
+
+    async function deleteAccount(id) {
+      await fetch(`${API_BASE}/api/accounts/${id}`, { method: 'DELETE' });
+      showToast('Đã xóa tài khoản!');
+      loadAccounts();
+    }
+
+    async function loadLogs() {
+      try {
+        const logsRes = await fetch(`${API_BASE}/api/logs`).catch(() => null);
+        const container = document.getElementById('logsList');
+        
+        if (logsRes && logsRes.ok) {
+          const logsData = await logsRes.json();
+          renderLogs(logsData.logs || []);
+        } else {
+          container.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--text-dim);">Nhật ký đang chạy ngầm trên Python Backend...</div>';
+        }
+      } catch (e) {}
+    }
+
+    function renderLogs(logs) {
+      const container = document.getElementById('logsList');
+      if (logs.length === 0) {
+        container.innerHTML = '<div style="text-align: center; padding: 30px; color: var(--text-dim);">Chưa có nhật ký hoạt động nào.</div>';
+        return;
+      }
+
+      const actionLabels = {
+        CREATE_POST: { label: '📝 Tạo bài đăng', color: '#60a5fa', bg: 'rgba(59,130,246,0.15)' },
+        UPDATE_POST: { label: '🔄 Tiến độ', color: '#fbbf24', bg: 'rgba(245,158,11,0.15)' },
+        TRIGGER_POST_NOW: { label: '⚡ Phát lệnh đăng ngay', color: '#a78bfa', bg: 'rgba(139,92,246,0.15)' },
+        DELETE_POST: { label: '🗑️ Xóa bài', color: '#f87171', bg: 'rgba(239,68,68,0.15)' }
+      };
+
+      container.innerHTML = logs.map(l => {
+        const act = actionLabels[l.action] || { label: l.action, color: '#94a3b8', bg: 'rgba(255,255,255,0.08)' };
+        let timeStr = l.timestamp ? new Date(l.timestamp).toLocaleTimeString('vi-VN') + ' ' + new Date(l.timestamp).toLocaleDateString('vi-VN') : '';
+        
+        let detailsHtml = '';
+        if (l.details && l.details.updates) {
+          const u = l.details.updates;
+          if (u.progressStep) detailsHtml += `<span style="color:#e2e8f0; font-weight:600;">${escapeHtml(u.progressStep)}</span> `;
+          if (u.status) detailsHtml += `<span style="color:${u.status==='completed'?'#4ade80':(u.status==='failed'?'#f87171':'#fbbf24')}; font-weight:700;">[Status: ${u.status.toUpperCase()}]</span> `;
+          if (u.lastError) detailsHtml += `<span style="color:#f87171; display:block; margin-top:2px;">⚠️ ${escapeHtml(u.lastError)}</span>`;
+        } else if (l.details) {
+          detailsHtml = `<span style="color:#cbd5e1;">${escapeHtml(JSON.stringify(l.details))}</span>`;
+        }
+
+        return `
+        <div style="padding:10px 14px; background:rgba(10,14,24,0.7); border:1px solid var(--border-color); border-radius:10px; font-size:12px; display:flex; flex-direction:column; gap:4px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="padding:2px 8px; border-radius:6px; font-weight:700; font-size:11px; background:${act.bg}; color:${act.color};">${act.label}</span>
+            <span style="color:var(--text-dim); font-size:11px;">⏰ ${timeStr}</span>
+          </div>
+          <div style="margin-top:2px;">${detailsHtml}</div>
+        </div>
+      `}).join('');
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      if (typeof str !== 'string') str = String(str);
+      return str.replace(/[&<>"']/g, function(m) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m];
+      });
+    }
+
+    // ================================================================
+    // MEDIA UPLOAD: File picker, Drag & Drop, Preview, Base64
+    // ================================================================
+    let _adminMediaData = null; // { base64, fileName, mimeType, size }
+
+    function handleAdminMediaFile(file) {
+      if (!file) return;
+
+      // Validate type (check extension as fallback when file.type is empty)
+      const isImageByType = file.type && file.type.startsWith('image/');
+      const isVideoByType = file.type && file.type.startsWith('video/');
+      const isImageByExt = file.name && file.name.match(/\.(jpg|jpeg|png|gif|webp|tiff|heif|bmp)$/i);
+      const isVideoByExt = file.name && file.name.match(/\.(mp4|mov|avi|mkv|webm|flv|wmv|m4v)$/i);
+      const isImage = isImageByType || isImageByExt;
+      const isVideo = isVideoByType || isVideoByExt;
+
+      if (!isImage && !isVideo) {
+        showToast('⚠️ Chỉ hỗ trợ file ảnh (JPG, PNG, GIF, WebP) hoặc video (MP4, MOV, AVI, MKV, WebM)!');
+        return;
+      }
+
+      // Validate size: 10MB for images, 100MB for videos
+      const maxSize = isVideo ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
+      const maxLabel = isVideo ? '100MB' : '10MB';
+      if (file.size > maxSize) {
+        showToast(`⚠️ File quá lớn! Tối đa ${maxLabel} cho ${isVideo ? 'video' : 'ảnh'}.`);
+        return;
+      }
+
+      // Show preview
+      const preview = document.getElementById('mediaPreview');
+      const dropText = document.getElementById('mediaDropText');
+      preview.innerHTML = '';
+
+      if (isImage) {
+        const img = document.createElement('img');
+        img.style.cssText = 'max-width:100%; max-height:180px; border-radius:10px; object-fit:cover;';
+        img.src = URL.createObjectURL(file);
+        img.onload = () => URL.revokeObjectURL(img.src);
+        preview.appendChild(img);
+      } else {
+        const video = document.createElement('video');
+        video.style.cssText = 'max-width:100%; max-height:180px; border-radius:10px;';
+        video.src = URL.createObjectURL(file);
+        video.controls = true;
+        video.muted = true;
+        preview.appendChild(video);
+      }
+
+      preview.style.display = 'block';
+      dropText.style.display = 'none';
+
+      // File info
+      const fileInfo = document.getElementById('mediaFileInfo');
+      const fileName = document.getElementById('mediaFileName');
+      const sizeStr = file.size < 1024 * 1024
+        ? (file.size / 1024).toFixed(1) + ' KB'
+        : (file.size / (1024 * 1024)).toFixed(1) + ' MB';
+      fileName.textContent = `📎 ${file.name} (${sizeStr})`;
+      fileInfo.style.display = 'flex';
+
+      // Read base64
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const base64Data = e.target.result.split(',')[1];
+        let resolvedMime = file.type;
+        if (!resolvedMime || resolvedMime === '') {
+          if (file.name.match(/\.(mp4|mov|avi|mkv|webm)$/i)) resolvedMime = 'video/mp4';
+          else if (file.name.match(/\.(jpg|jpeg|png|gif|webp)$/i)) resolvedMime = 'image/jpeg';
+        }
+        _adminMediaData = {
+          base64: base64Data,
+          fileName: file.name,
+          mimeType: resolvedMime || 'application/octet-stream',
+          size: file.size
+        };
+        showToast(`✅ File "${file.name}" đã sẵn sàng!`);
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function clearAdminMedia() {
+      _adminMediaData = null;
+      const preview = document.getElementById('mediaPreview');
+      const dropText = document.getElementById('mediaDropText');
+      const fileInfo = document.getElementById('mediaFileInfo');
+      const fileInput = document.getElementById('mediaFileInput');
+
+      if (preview) { preview.innerHTML = ''; preview.style.display = 'none'; }
+      if (dropText) dropText.style.display = 'block';
+      if (fileInfo) fileInfo.style.display = 'none';
+      if (fileInput) fileInput.value = '';
+    }
+
+    // Drag & Drop setup
+    (function() {
+      const dz = document.getElementById('mediaDropZone');
+      if (!dz) return;
+
+      dz.addEventListener('dragenter', (e) => { e.preventDefault(); dz.style.borderColor = '#3b82f6'; dz.style.background = 'rgba(59,130,246,0.15)'; });
+      dz.addEventListener('dragover', (e) => { e.preventDefault(); });
+      dz.addEventListener('dragleave', () => { dz.style.borderColor = 'rgba(59,130,246,0.5)'; dz.style.background = 'linear-gradient(135deg, rgba(59,130,246,0.1), rgba(139,92,246,0.08))'; });
+      dz.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dz.style.borderColor = 'rgba(59,130,246,0.5)';
+        dz.style.background = 'linear-gradient(135deg, rgba(59,130,246,0.1), rgba(139,92,246,0.08))';
+        const file = e.dataTransfer.files[0];
+        if (file) handleAdminMediaFile(file);
+      });
+    })();
+  </script>
+</body>
+</html>

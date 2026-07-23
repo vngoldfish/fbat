@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.env
+
+# Data files (chứa base64 media lớn)
+fbauto-backend-python/data/*.json
+
+# Server logs
+fbauto-backend-python/server.log
+fbauto-backend-python/nohup.out
+
+# HAR files (lớn)
+*.har
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Node
+node_modules/
+
+# Gemini
+.gemini/

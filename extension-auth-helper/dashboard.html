@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FB Auto Post - Scheduled Posts Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #090d16;
+      --bg-card: rgba(18, 24, 38, 0.75);
+      --border-color: rgba(255, 255, 255, 0.08);
+      --accent-blue: #3b82f6;
+      --accent-blue-hover: #2563eb;
+      --accent-green: #10b981;
+      --accent-yellow: #f59e0b;
+      --accent-red: #ef4444;
+      --accent-purple: #8b5cf6;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, #060911 0%, #0d1322 50%, #151d33 100%);
+      color: var(--text-main);
+      min-height: 100vh;
+      padding: 32px 24px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .app-container {
+      width: 100%;
+      max-width: 1100px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* Top Navigation / Header */
+    .header-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-card);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 16px 24px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+    }
+
+    .brand-section {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-logo {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      box-shadow: 0 6px 18px rgba(59, 130, 246, 0.35);
+    }
+
+    .brand-title h1 {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      background: linear-gradient(135deg, #ffffff, #94a3b8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .brand-title p {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* Auto-refresh indicator */
+    .auto-refresh-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #34d399;
+    }
+
+    .auto-refresh-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: #22c55e;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .btn {
+      padding: 10px 18px;
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(59, 130, 246, 0.3);
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(59, 130, 246, 0.4);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-muted);
+      border: 1px solid var(--border-color);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+
+    /* Grid Layout */
+    .content-grid {
+      display: grid;
+      grid-template-columns: 440px 1fr;
+      gap: 24px;
+    }
+
+    /* Cards */
+    .card {
+      background: var(--bg-card);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      max-height: 85vh;
+      overflow-y: auto;
+    }
+
+    .card-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .card-title span.badge {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: rgba(59, 130, 246, 0.15);
+      color: #60a5fa;
+      border: 1px solid rgba(59, 130, 246, 0.25);
+    }
+
+    /* Form Controls */
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .form-group label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .form-control {
+      width: 100%;
+      padding: 12px 14px;
+      background: rgba(8, 12, 20, 0.7);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      color: #fff;
+      font-family: inherit;
+      font-size: 14px;
+      transition: all 0.2s ease;
+    }
+
+    .form-control:focus {
+      outline: none;
+      border-color: var(--accent-blue);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+    }
+
+    textarea.form-control {
+      min-height: 120px;
+      resize: vertical;
+    }
+
+    /* Target URL Presets */
+    .preset-row {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .preset-btn {
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid var(--border-color);
+      background: rgba(255, 255, 255, 0.03);
+      color: var(--text-muted);
+      transition: all 0.2s ease;
+    }
+
+    .preset-btn:hover {
+      background: rgba(59, 130, 246, 0.15);
+      color: #60a5fa;
+      border-color: rgba(59, 130, 246, 0.3);
+    }
+
+    /* Post Queue Filters */
+    .filter-tabs {
+      display: flex;
+      gap: 8px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 12px;
+    }
+
+    .tab-btn {
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .tab-btn:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .tab-btn.active {
+      color: #fff;
+      background: rgba(59, 130, 246, 0.2);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+
+    /* Queue Table / List */
+    .post-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-height: 540px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .post-item {
+      background: rgba(10, 14, 24, 0.6);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      transition: all 0.2s ease;
+    }
+
+    .post-item:hover {
+      border-color: rgba(255, 255, 255, 0.15);
+      transform: translateY(-1px);
+    }
+
+    .post-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .post-time {
+      font-size: 12px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .status-badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 6px;
+      text-transform: capitalize;
+    }
+
+    .status-pending {
+      background: rgba(245, 158, 11, 0.15);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.25);
+    }
+
+    .status-in_progress {
+      background: rgba(59, 130, 246, 0.15);
+      color: #60a5fa;
+      border: 1px solid rgba(59, 130, 246, 0.25);
+    }
+
+    .status-completed {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.25);
+    }
+
+    .status-failed {
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.25);
+    }
+
+    .post-content {
+      font-size: 13px;
+      color: #e2e8f0;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .post-target {
+      font-size: 11px;
+      color: var(--text-dim);
+      background: rgba(0, 0, 0, 0.3);
+      padding: 4px 8px;
+      border-radius: 6px;
+      word-break: break-all;
+    }
+
+    /* Progress detail bar */
+    .post-progress {
+      font-size: 11px;
+      color: #60a5fa;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 8px;
+      background: rgba(59, 130, 246, 0.08);
+      border-radius: 6px;
+      border: 1px solid rgba(59, 130, 246, 0.15);
+    }
+
+    .post-progress .progress-dot {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: #3b82f6;
+      animation: pulse 1s ease-in-out infinite;
+    }
+
+    .post-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 4px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .post-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .btn-xs {
+      padding: 4px 10px;
+      font-size: 11px;
+      border-radius: 6px;
+    }
+
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.25);
+    }
+
+    .btn-danger:hover {
+      background: rgba(239, 68, 68, 0.3);
+      color: #fff;
+    }
+
+    .btn-purple {
+      background: rgba(139, 92, 246, 0.15);
+      color: #a78bfa;
+      border: 1px solid rgba(139, 92, 246, 0.25);
+    }
+
+    .btn-purple:hover {
+      background: rgba(139, 92, 246, 0.3);
+      color: #fff;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-dim);
+      font-size: 13px;
+    }
+
+    /* Toast notification */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      padding: 12px 20px;
+      border-radius: 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      font-size: 13px;
+      font-weight: 500;
+      color: #fff;
+      display: none;
+      animation: slideUp 0.3s ease-out;
+      z-index: 100;
+    }
+
+    .toast.show {
+      display: block;
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    /* Media drop zone hover */
+    #mediaDropZone.drag-over {
+      border-color: #3b82f6 !important;
+      background: rgba(59,130,246,0.1) !important;
+      box-shadow: 0 0 20px rgba(59,130,246,0.15) inset;
+    }
+
+    #mediaDropZone:hover {
+      border-color: rgba(59,130,246,0.5);
+      background: rgba(59,130,246,0.06);
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="header-nav">
+      <div class="brand-section">
+        <img src="icon48.png" alt="Logo" class="brand-logo">
+        <div class="brand-title">
+          <h1>FB Auto Post Dashboard</h1>
+          <p>Scheduled Posts & Automation Manager v2.0</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <div class="auto-refresh-badge">
+          <div class="auto-refresh-dot"></div>
+          Auto-refresh <span id="refreshCountdown">5s</span>
+        </div>
+        <button class="btn btn-secondary" id="btnRefreshQueue">
+          <span>🔄</span> Làm Mới
+        </button>
+        <button class="btn btn-primary" id="btnTriggerNow">
+          <span>⚡</span> Kiểm Tra & Đăng Ngay
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="content-grid">
+      <!-- Create Post Form -->
+      <div class="card">
+        <div class="card-title">
+          <span>📅 Lên Lịch Bài Đăng</span>
+          <span class="badge">v3.0</span>
+        </div>
+
+        <form id="scheduleForm" onsubmit="return false;">
+          <div class="form-group">
+            <label for="postType">Loại hình đăng bài</label>
+            <select id="postType" class="form-control">
+              <option value="post">📝 Bài viết (Feed Post / Ảnh)</option>
+              <option value="video">🎥 Video</option>
+              <option value="reel">🎬 Thước phim (Reels)</option>
+              <option value="story">📲 Bản tin (Stories)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="postContent">Nội dung bài viết / Mô tả</label>
+            <textarea id="postContent" class="form-control" placeholder="Nhập nội dung bài đăng hoặc mô tả...&#10;&#10;Hỗ trợ nhiều dòng, emoji 😊🔥"></textarea>
+          </div>
+
+          <div class="form-group">
+            <label>📎 ĐÍNH KÈM ẢNH / VIDEO</label>
+            <div id="mediaDropZone" style="
+              border: 2px dashed rgba(59,130,246,0.5); border-radius: 14px; padding: 24px 16px;
+              text-align: center; cursor: pointer; transition: all 0.3s ease;
+              background: linear-gradient(135deg, rgba(59,130,246,0.08), rgba(139,92,246,0.06));
+              min-height: 100px;
+              display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+            ">
+              <div id="mediaPreview" style="display:none; width:100%; max-height:200px; overflow:hidden; border-radius:10px; margin-bottom:8px;"></div>
+              <div id="mediaDropText">
+                <div style="font-size:36px; margin-bottom:6px;">📸</div>
+                <div style="
+                  display:inline-flex; align-items:center; gap:8px;
+                  padding: 10px 22px; border-radius: 10px;
+                  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+                  color: #fff; font-weight: 700; font-size: 14px;
+                  box-shadow: 0 4px 14px rgba(59,130,246,0.35);
+                ">📤 BẤM ĐỂ CHỌN ẢNH / VIDEO</div>
+                <div style="font-size:12px; color:var(--text-muted); margin-top:10px;">hoặc <b>kéo thả file</b> vào đây</div>
+                <div style="font-size:11px; color:var(--text-dim); margin-top:4px;">JPG, PNG, GIF, MP4, MOV — Tối đa 25MB</div>
+              </div>
+              <input type="file" id="mediaFileInput" accept="image/*,video/*" style="display:none;">
+            </div>
+            <div id="mediaFileInfo" style="display:none; margin-top:8px; padding:10px 14px; background:rgba(59,130,246,0.1); border:1px solid rgba(59,130,246,0.3); border-radius:10px; align-items:center; justify-content:space-between;">
+              <span id="mediaFileName" style="font-size:13px; color:#60a5fa; font-weight:600;"></span>
+              <button type="button" id="mediaRemoveBtn" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3); color:#f87171; cursor:pointer; font-size:12px; font-weight:700; padding:4px 12px; border-radius:6px;">✕ Xóa file</button>
+            </div>
+            <div id="uploadProgress" style="display:none; margin-top:6px;">
+              <div style="height:6px; background:rgba(255,255,255,0.1); border-radius:3px; overflow:hidden;">
+                <div id="uploadProgressBar" style="height:100%; width:0%; background:linear-gradient(90deg,#3b82f6,#8b5cf6); border-radius:3px; transition:width 0.3s ease;"></div>
+              </div>
+              <div id="uploadProgressText" style="font-size:11px; color:var(--text-muted); margin-top:4px; text-align:center;">Đang upload...</div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="mediaUrl">URL File Media (Tùy chọn — nếu không chọn file ở trên)</label>
+            <input type="url" id="mediaUrl" class="form-control" placeholder="https://example.com/video.mp4 hoặc photo.jpg">
+          </div>
+
+          <div class="form-group">
+            <label for="targetUrl">URL Facebook Mục Tiêu</label>
+            <div class="preset-row">
+              <button type="button" class="preset-btn" data-url="https://www.facebook.com">🏠 Trang cá nhân</button>
+              <button type="button" class="preset-btn" data-url="https://www.facebook.com/reels/create">🎬 Reels</button>
+              <button type="button" class="preset-btn" data-url="https://www.facebook.com/stories/create">📲 Story</button>
+            </div>
+            <input type="url" id="targetUrl" class="form-control" placeholder="https://www.facebook.com hoặc URL Trang/Nhóm" style="margin-top: 6px;">
+          </div>
+
+          <div class="form-group">
+            <label for="scheduledDateTime">Thời gian đăng</label>
+            <input type="datetime-local" id="scheduledDateTime" class="form-control" required>
+          </div>
+
+          <div class="form-group">
+            <label for="repeatInterval">Lặp lại (Phút)</label>
+            <input type="number" id="repeatInterval" class="form-control" placeholder="0 (Không lặp lại)" min="0" value="0">
+          </div>
+
+          <button type="submit" class="btn btn-primary" id="btnSaveSchedule" style="width: 100%; justify-content: center; margin-top: 8px;">
+            <span>💾</span> Lưu Lịch Đăng
+          </button>
+        </form>
+      </div>
+
+      <!-- Queue & History Section -->
+      <div class="card">
+        <div class="card-title">
+          <span>📋 Danh Sách Bài Đăng</span>
+          <span class="badge" id="totalCount">0 bài</span>
+        </div>
+
+        <div class="filter-tabs">
+          <button class="tab-btn active" data-filter="all">Tất cả</button>
+          <button class="tab-btn" data-filter="pending">Đang chờ</button>
+          <button class="tab-btn" data-filter="in_progress">Đang đăng</button>
+          <button class="tab-btn" data-filter="completed">Thành công</button>
+          <button class="tab-btn" data-filter="failed">Thất bại</button>
+        </div>
+
+        <div class="post-list" id="postList">
+          <div class="empty-state">Chưa có bài đăng nào trong lịch trình.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toastMsg"></div>
+
+  <script src="dashboard.js"></script>
+</body>
+</html>
