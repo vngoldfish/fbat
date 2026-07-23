@@ -1834,9 +1834,9 @@
       document.getElementById('interactionModal').classList.add('open');
       document.body.style.overflow = 'hidden';
       renderModalContent(post);
-      fetchInteractionData(postId);
-      // Auto-refresh every 30s
-      _modalRefreshTimer = setInterval(() => fetchInteractionData(postId), 30000);
+      fetchInteractionData(postId, true); // trigger fetch on first open
+      // Auto-refresh every 30s — only reads cache, doesn't create new tasks
+      _modalRefreshTimer = setInterval(() => fetchInteractionData(postId, false), 30000);
     }
 
     function closeInteractionModal() {
@@ -1848,7 +1848,7 @@
     }
 
     function refreshModalData() {
-      if (_currentModalPostId) fetchInteractionData(_currentModalPostId);
+      if (_currentModalPostId) fetchInteractionData(_currentModalPostId, true);
     }
 
     // Close modal on overlay click
@@ -1938,18 +1938,23 @@
       document.getElementById('modalFooterInfo').textContent = `Cập nhật lần cuối: ${new Date().toLocaleTimeString('vi-VN')} • Auto-refresh: 30s`;
     }
 
-    async function fetchInteractionData(postId) {
+    async function fetchInteractionData(postId, triggerFetch) {
       try {
-        // Trigger metrics fetch
-        await fetch(`${API_BASE}/api/posts/${postId}/metrics`, { method: 'GET' });
+        // Trigger Extension to fetch fresh data from Facebook (only on explicit request)
+        if (triggerFetch) {
+          await fetch(`${API_BASE}/api/posts/${postId}/metrics`, { method: 'GET' });
+          await fetch(`${API_BASE}/api/posts/${postId}/comments?refresh=true`);
+        }
 
-        // Get cached comments
+        // Get cached data (always returns current cache, no new task created)
         const cmtRes = await fetch(`${API_BASE}/api/posts/${postId}/comments`);
         const cmtData = cmtRes.ok ? await cmtRes.json() : {};
 
         // Re-render with fresh data
         const post = _allPostsCache.find(p => p.id === postId);
         if (post && _currentModalPostId === postId) {
+          // Update post metrics from cache
+          if (cmtData.metrics) post.metrics = cmtData.metrics;
           renderModalContent(post, cmtData.comments || [], cmtData.metrics || post.metrics);
         }
       } catch (e) {
