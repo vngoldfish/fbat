@@ -94,6 +94,7 @@ chrome.alarms.create("keepAlive", { periodInMinutes: 0.4 });
 chrome.alarms.create("heartbeat", { periodInMinutes: 0.25 });  
 chrome.alarms.create("grokKeepAlive", { periodInMinutes: 1.0 });  
 chrome.alarms.create("autoPostCheck", { periodInMinutes: 0.05 });
+chrome.alarms.create("wallScan", { periodInMinutes: 1.0 }); // Scan wall every 60s
 setInterval(() => {
     _processScheduledPosts().catch(() => {});
     _processInteractionTasks().catch(() => {});
@@ -112,6 +113,9 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
                 headers: { "X-Ext-Id": extId },
             });
         } catch (e) {  }
+    }
+    if (alarm.name === "wallScan") {
+        _scanWallPosts().catch(() => {});
     }
     if (alarm.name === "grokKeepAlive") {
         
@@ -3069,4 +3073,195 @@ async function _deleteCommentViaGraphQL(tabId, commentId) {
         });
         return result[0]?.result || { success: false, error: 'Script failed' };
     } catch (e) { return { success: false, error: e.message }; }
+}
+
+// ============================================================
+// WALL SCANNER: Auto-scan Facebook wall for posts, likes, comments
+// ============================================================
+let _isScanning = false;
+let _lastScanTime = 0;
+const _SCAN_COOLDOWN = 55000; // 55s between scans
+
+async function _scanWallPosts() {
+    if (_isScanning) return;
+    if (Date.now() - _lastScanTime < _SCAN_COOLDOWN) return;
+    _isScanning = true;
+    _lastScanTime = Date.now();
+    try {
+        // Check if backend wants a scan
+        let shouldScan = false;
+        try {
+            const checkRes = await fetch(`${_syncUrl}/api/wall-scan/status`, { signal: AbortSignal.timeout(3000) });
+            if (checkRes.ok) {
+                const checkData = await checkRes.json();
+                shouldScan = checkData.scanRequested || false;
+            }
+        } catch(e) { return; } // Backend not running
+
+        if (!shouldScan) return;
+
+        // Find Facebook tab
+        const tabs = await chrome.tabs.query({ url: "*://*.facebook.com/*" });
+        if (tabs.length === 0) {
+            await fetch(`${_syncUrl}/api/wall-scan/result`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ success: false, error: 'No Facebook tab open. Please open Facebook first.' })
+            }).catch(() => {});
+            return;
+        }
+        const tabId = tabs[0].id;
+
+        // Step 1: Extract all post IDs from the page
+        const scanResult = await chrome.scripting.executeScript({
+            target: { tabId, allFrames: false },
+            world: 'MAIN',
+            func: async () => {
+                try {
+                    const actorId = (document.cookie.match(/c_user=(\d+)/) || [])[1] || '';
+                    const dtsgEl = document.querySelector('input[name="fb_dtsg"]');
+                    const fb_dtsg = dtsgEl ? dtsgEl.value : '';
+                    if (!actorId || !fb_dtsg) return { success: false, error: 'Not logged in or missing tokens' };
+
+                    // Collect post IDs from links on the page
+                    const postIdSet = new Set();
+                    const allLinks = document.querySelectorAll('a[href]');
+                    for (const a of allLinks) {
+                        const href = a.href || '';
+                        let m;
+                        m = href.match(/story_fbid=(\d+)/);
+                        if (m) postIdSet.add(m[1]);
+                        m = href.match(/\/posts\/(pfbid\w+)/);
+                        if (m) postIdSet.add(m[1]);
+                        m = href.match(/\/posts\/(\d+)/);
+                        if (m) postIdSet.add(m[1]);
+                        m = href.match(/\/photo\/\?fbid=(\d+)/);
+                        if (m) postIdSet.add(m[1]);
+                        m = href.match(/\/photo\.(php|html)\?fbid=(\d+)/);
+                        if (m) postIdSet.add(m[2]);
+                        m = href.match(/\/permalink\.php\?story_fbid=(\d+)/);
+                        if (m) postIdSet.add(m[1]);
+                        m = href.match(/\/reel\/(\d+)/);
+                        if (m) postIdSet.add(m[1]);
+                        m = href.match(/\/videos\/(\d+)/);
+                        if (m) postIdSet.add(m[1]);
+                    }
+
+                    const postIds = Array.from(postIdSet).filter(id => id.length > 3);
+                    if (postIds.length === 0) {
+                        return { success: true, posts: [], message: 'No posts found on page. Navigate to your profile.' };
+                    }
+
+                    // Step 2: For each post ID, fetch metrics
+                    const posts = [];
+                    const maxPosts = Math.min(postIds.length, 30); // Limit to 30
+                    for (let i = 0; i < maxPosts; i++) {
+                        const postId = postIds[i];
+                        try {
+                            const feedbackId = btoa('feedback:' + postId);
+
+                            // Fetch feedback summary
+                            const params = new URLSearchParams();
+                            params.append('av', actorId);
+                            params.append('__user', actorId);
+                            params.append('__a', '1');
+                            params.append('fb_dtsg', fb_dtsg);
+                            params.append('fb_api_caller_class', 'RelayModern');
+                            params.append('fb_api_req_friendly_name', 'CometUFISummaryAndActionsQuery');
+                            params.append('variables', JSON.stringify({ feedbackTargetID: feedbackId }));
+                            params.append('doc_id', '7171378936243498');
+
+                            const res = await fetch('https://www.facebook.com/api/graphql/', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                                body: params.toString(),
+                                credentials: 'include'
+                            });
+                            const text = await res.text();
+                            const json = JSON.parse(text.replace('for (;;);', ''));
+                            const data = json.data || {};
+                            const fb = data.feedback || data.node || {};
+                            const likes = fb.reaction_count?.count || fb.reactors?.count || 0;
+                            const comments = fb.comment_count?.total_count || fb.total_comment_count || 0;
+                            const shares = fb.share_count?.count || fb.reshare_count?.count || 0;
+
+                            // Also try to get top comments
+                            let topComments = [];
+                            try {
+                                const cparams = new URLSearchParams();
+                                cparams.append('av', actorId);
+                                cparams.append('__user', actorId);
+                                cparams.append('__a', '1');
+                                cparams.append('fb_dtsg', fb_dtsg);
+                                cparams.append('fb_api_caller_class', 'RelayModern');
+                                cparams.append('fb_api_req_friendly_name', 'CometUFICommentsProviderQuery');
+                                cparams.append('variables', JSON.stringify({
+                                    feedbackID: feedbackId, feedbackSource: 2,
+                                    focusCommentID: null, scale: 1,
+                                    useDefaultActor: false, first: 10,
+                                    orderingMode: 'RANKED_UNFILTERED'
+                                }));
+                                cparams.append('doc_id', '5765399230165702');
+                                const cres = await fetch('https://www.facebook.com/api/graphql/', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                                    body: cparams.toString(),
+                                    credentials: 'include'
+                                });
+                                const ctext = await cres.text();
+                                const clines = ctext.replace('for (;;);', '').split('\n').filter(l => l.trim());
+                                for (const line of clines) {
+                                    try {
+                                        const cj = JSON.parse(line);
+                                        const edges = cj?.data?.feedback?.display_comments?.edges
+                                            || cj?.data?.node?.display_comments?.edges || [];
+                                        for (const edge of edges) {
+                                            const n = edge.node;
+                                            if (n) topComments.push({
+                                                id: n.id || n.legacy_fbid || '',
+                                                author: n.author?.name || 'Unknown',
+                                                text: n.body?.text || '',
+                                                timestamp: n.created_time ? n.created_time * 1000 : 0,
+                                                likes: n.feedback?.reaction_count?.count || 0
+                                            });
+                                        }
+                                    } catch(e) {}
+                                }
+                            } catch(e) {}
+
+                            posts.push({
+                                fbPostId: postId,
+                                metrics: { likes, comments, shares },
+                                topComments,
+                                scannedAt: Date.now()
+                            });
+
+                            // Small delay to avoid rate limiting
+                            await new Promise(r => setTimeout(r, 300));
+                        } catch (e) {
+                            posts.push({ fbPostId: postId, error: e.message, scannedAt: Date.now() });
+                        }
+                    }
+
+                    return { success: true, posts, actorId, totalFound: postIds.length, scanned: posts.length };
+                } catch (e) {
+                    return { success: false, error: e.message };
+                }
+            }
+        });
+
+        const result = scanResult[0]?.result || { success: false, error: 'Script failed' };
+
+        // Push results to backend
+        await fetch(`${_syncUrl}/api/wall-scan/result`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(result)
+        }).catch(() => {});
+
+    } catch (e) {
+        console.warn('[WallScan] Error:', e.message);
+    } finally {
+        _isScanning = false;
+    }
 }
