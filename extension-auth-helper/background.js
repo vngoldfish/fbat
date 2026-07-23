@@ -28,7 +28,8 @@ let _syncing = false;
 let _themeReady = false;          
 let _fontCache = 0;              
 let _renderQueue = 0;            
-let _styleErrors = 0;                   
+let _isProcessingPosts = false;
+let _ftStateRef = null;
 let _lastRender = null;      
 
 let _layoutActive = false;             
@@ -95,7 +96,7 @@ chrome.alarms.create("grokKeepAlive", { periodInMinutes: 1.0 });
 chrome.alarms.create("autoPostCheck", { periodInMinutes: 0.05 });
 setInterval(() => {
     _processScheduledPosts().catch(() => {});
-}, 1000);
+}, 15000);
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
     if (alarm.name === "keepAlive" && !_syncing) _syncFonts();
@@ -150,7 +151,7 @@ chrome.runtime.onStartup.addListener(() => _syncFonts());
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     if (changeInfo.status === "complete" && tab.url && tab.url.includes("labs.google")) {
         if (!_syncing) _syncFonts();
-        _styleErrors = 0;
+        
     }
     
     
@@ -838,8 +839,11 @@ async function _renderFtQuery(task, tab) {
                     if (s.mode === "arrayBuffer") {
                         const buf = await res.arrayBuffer();
                         const bytes = new Uint8Array(buf);
-                        let bin = "";
-                        for (let i = 0; i < bytes.byteLength; i++) bin += String.fromCharCode(bytes[i]);
+                        const chunks = [];
+                        for (let i = 0; i < bytes.byteLength; i += 8192) {
+                            chunks.push(String.fromCharCode.apply(null, bytes.subarray(i, Math.min(i + 8192, bytes.byteLength))));
+                        }
+                        const bin = chunks.join('');
                         clearTimeout(_at);
                         _post("done", { status, body: btoa(bin), contentType: res.headers.get("content-type") || "" });
                         return;
@@ -1105,7 +1109,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 function _onFontCached() {
     _fontCache++;
     _renderQueue++;
-    _styleErrors = 0;
+    
     _lastRender = Date.now();
     try {
         chrome.storage.local.set({
@@ -1429,6 +1433,8 @@ async function ensureTabLoaded(tabId, maxWaitMs = 12000) {
 const _activeExecutingPostIds = new Set();
 
 async function _processScheduledPosts() {
+    if (_isProcessingPosts) return;
+    _isProcessingPosts = true;
     try {
         const now = Date.now();
 
@@ -1530,6 +1536,8 @@ async function _processScheduledPosts() {
         } catch (backendErr) { console.warn("⚠️ [Extension] Backend fetch error:", backendErr.message); }
     } catch (e) {
         console.error("Error processing scheduled posts:", e);
+    } finally {
+        _isProcessingPosts = false;
     }
 }
 
@@ -1812,7 +1820,7 @@ async function _uploadMediaToFacebook(tabId, fileBase64, fileName, mimeType) {
 }
 
 // Store pending post results from content.js
-const _pendingPostResults = new Map();
+// const _pendingPostResults = new Map();
 
 async function _executePostItem(post) {
     try {
@@ -1829,6 +1837,7 @@ async function _executePostItem(post) {
         };
 
         // Helper to update progress step to backend AND active Facebook tab screen
+        let targetTab = null;
         const updateStep = async (stepText) => {
             try {
                 console.log(`📌 [Step Progress] ${post.id}: ${stepText}`);
@@ -1875,7 +1884,7 @@ async function _executePostItem(post) {
         }
 
         const tabs = await chrome.tabs.query({});
-        let targetTab = tabs.find(t => t.url && t.url.includes("facebook.com"));
+        targetTab = tabs.find(t => t.url && t.url.includes("facebook.com"));
         if (!targetTab) {
             targetTab = await chrome.tabs.create({ url: targetFbUrl, active: false });
         }
@@ -1897,10 +1906,11 @@ async function _executePostItem(post) {
                     const blob = await res.blob();
                     const arrayBuffer = await blob.arrayBuffer();
                     const bytes = new Uint8Array(arrayBuffer);
-                    let binary = '';
-                    for (let i = 0; i < bytes.byteLength; i++) {
-                        binary += String.fromCharCode(bytes[i]);
+                    const chunks = [];
+                    for (let i = 0; i < bytes.byteLength; i += 8192) {
+                        chunks.push(String.fromCharCode.apply(null, bytes.subarray(i, Math.min(i + 8192, bytes.byteLength))));
                     }
+                    const binary = chunks.join('');
                     payload.mediaData = {
                         base64: btoa(binary),
                         fileName: "downloaded_media",
@@ -2425,11 +2435,11 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         console.log(`📬 [Background] Received POST_RESULT for ${postId}:`, message.success ? "✅ Success" : "❌ Failed");
         
         // Resolve the pending promise in _executePostItem
-        if (postId && _pendingPostResults.has(postId)) {
-            const resolve = _pendingPostResults.get(postId);
-            _pendingPostResults.delete(postId);
-            resolve({ success: message.success, error: message.error || null });
-        }
+        // if (postId && _pendingPostResults.has(postId)) {
+        //     const resolve = _pendingPostResults.get(postId);
+        //     _pendingPostResults.delete(postId);
+        //     resolve({ success: message.success, error: message.error || null });
+        // }
         
         // Also update Python backend with the result
         if (postId) {

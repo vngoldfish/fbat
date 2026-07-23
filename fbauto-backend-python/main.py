@@ -10,6 +10,9 @@ from routes.sync import handle_sync_route
 from routes.posts import handle_posts_route
 from routes.accounts import handle_accounts_route
 
+_admin_html_cache = None
+_admin_html_mtime = 0
+
 # Attempt to load FastAPI if available for OpenAPI / Swagger UI support
 HAS_FASTAPI = False
 try:
@@ -71,17 +74,22 @@ if HAS_FASTAPI:
             return JSONResponse(status_code=status, content=res_data)
 
         if full_path == "/api/logs":
-            logs = database.get_collection("logs")
-            logs.reverse()
-            return JSONResponse(status_code=200, content={"logs": logs[:100], "total": len(logs)})
+            all_logs = database.get_collection("logs")
+            logs = all_logs[-100:][::-1]
+            return JSONResponse(status_code=200, content={"logs": logs, "total": len(all_logs)})
 
         if full_path in ["/", "", "/admin", "/admin/"]:
             try:
-                with open(os.path.join(config.BASE_DIR, "admin.html"), "r", encoding="utf-8") as f:
-                    html_content = f.read()
+                global _admin_html_cache, _admin_html_mtime
+                admin_path = os.path.join(config.BASE_DIR, "admin.html")
+                mtime = os.path.getmtime(admin_path)
+                if _admin_html_cache is None or mtime > _admin_html_mtime:
+                    with open(admin_path, "r", encoding="utf-8") as f:
+                        _admin_html_cache = f.read()
+                    _admin_html_mtime = mtime
                 from fastapi.responses import HTMLResponse
                 return HTMLResponse(
-                    content=html_content,
+                    content=_admin_html_cache,
                     status_code=200,
                     headers={
                         "Cache-Control": "no-cache, no-store, must-revalidate",
@@ -103,7 +111,7 @@ class FallbackHTTPHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "application/json")
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type, X-Ext-Id, X-Tab-Status, X-Grok-Tab-Status")
+        self.send_header("Access-Control-Allow-Headers", "*")
         self.end_headers()
         self.wfile.write(json.dumps(content, ensure_ascii=False).encode("utf-8"))
 
@@ -147,8 +155,13 @@ class FallbackHTTPHandler(BaseHTTPRequestHandler):
 
         if path in ["/", "", "/admin", "/admin/"]:
             try:
-                with open(os.path.join(config.BASE_DIR, "admin.html"), "r", encoding="utf-8") as f:
-                    html_content = f.read()
+                global _admin_html_cache, _admin_html_mtime
+                admin_path = os.path.join(config.BASE_DIR, "admin.html")
+                mtime = os.path.getmtime(admin_path)
+                if _admin_html_cache is None or mtime > _admin_html_mtime:
+                    with open(admin_path, "r", encoding="utf-8") as f:
+                        _admin_html_cache = f.read()
+                    _admin_html_mtime = mtime
                 self.send_response(200)
                 self.send_header("Content-Type", "text/html; charset=utf-8")
                 self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
@@ -156,7 +169,7 @@ class FallbackHTTPHandler(BaseHTTPRequestHandler):
                 self.send_header("Expires", "0")
                 self.send_header("Access-Control-Allow-Origin", "*")
                 self.end_headers()
-                self.wfile.write(html_content.encode("utf-8"))
+                self.wfile.write(_admin_html_cache.encode("utf-8"))
                 return
             except Exception as e:
                 self._send_response(500, {"error": str(e)})
@@ -182,9 +195,9 @@ class FallbackHTTPHandler(BaseHTTPRequestHandler):
             return
 
         if path == "/api/logs":
-            logs = database.get_collection("logs")
-            logs.reverse()
-            self._send_response(200, {"logs": logs[:100], "total": len(logs)})
+            all_logs = database.get_collection("logs")
+            logs = all_logs[-100:][::-1]
+            self._send_response(200, {"logs": logs, "total": len(all_logs)})
             return
 
         self._send_response(404, {"error": "Endpoint not found"})

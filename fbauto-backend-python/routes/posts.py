@@ -40,6 +40,11 @@ def handle_posts_route(path: str, method: str, body: dict = None, query: dict = 
                     post_time = int(time.time() * 1000)
 
         rand_str = "".join(random.choices(string.ascii_lowercase + string.digits, k=5))
+        try:
+            repeat_interval = int(payload.get("repeatIntervalMinutes") or 0)
+        except (ValueError, TypeError):
+            repeat_interval = 0
+
         new_post = {
             "id": f"post_{int(time.time() * 1000)}_{rand_str}",
             "postType": post_type, # post | video | reel | story
@@ -54,7 +59,7 @@ def handle_posts_route(path: str, method: str, body: dict = None, query: dict = 
             "seedingComments": payload.get("seedingComments", []), # Array of comments to seed
             "metrics": payload.get("metrics", {"likes": 0, "comments": 0, "shares": 0}),
             "scheduledTime": post_time,
-            "repeatIntervalMinutes": int(payload.get("repeatIntervalMinutes") or 0),
+            "repeatIntervalMinutes": repeat_interval,
             "status": "pending",
             "retryCount": 0,
             "maxRetries": 3,
@@ -68,7 +73,8 @@ def handle_posts_route(path: str, method: str, body: dict = None, query: dict = 
 
     # DELETE /api/posts/<id>
     if path.startswith("/api/posts/") and method == "DELETE":
-        post_id = path.replace("/api/posts/", "").split("/")[0]
+        parts = [p for p in path.split('/') if p]
+        post_id = parts[2] if len(parts) > 2 else ""
         deleted = database.delete_item("posts", post_id)
         if deleted:
             database.add_log("DELETE_POST", {"postId": post_id})
@@ -77,7 +83,8 @@ def handle_posts_route(path: str, method: str, body: dict = None, query: dict = 
 
     # POST /api/posts/<id>/run-now
     if path.startswith("/api/posts/") and path.endswith("/run-now") and method == "POST":
-        post_id = path.replace("/api/posts/", "").replace("/run-now", "")
+        parts = [p for p in path.split('/') if p]
+        post_id = parts[2] if len(parts) > 2 else ""
         updated = database.update_item("posts", post_id, {
             "status": "pending",
             "scheduledTime": int(time.time() * 1000)
@@ -89,7 +96,8 @@ def handle_posts_route(path: str, method: str, body: dict = None, query: dict = 
 
     # PUT / PATCH /api/posts/<id>
     if path.startswith("/api/posts/") and method in ["PUT", "PATCH"]:
-        post_id = path.split("/")[3] if len(path.split("/")) > 3 else ""
+        parts = [p for p in path.split('/') if p]
+        post_id = parts[2] if len(parts) > 2 else ""
         updates = body or {}
         updated = database.update_item("posts", post_id, updates)
         if updated:

@@ -610,7 +610,7 @@
         </div>
 
         <div style="display:flex; gap:10px; margin-bottom:10px; align-items:center;">
-          <input type="text" id="searchCompleted" class="form-control" style="flex:1;" placeholder="🔍 Tìm kiếm bài viết theo nội dung, mã ID..." oninput="renderPosts(_allPostsCache)">
+          <input type="text" id="searchCompleted" class="form-control" style="flex:1;" placeholder="🔍 Tìm kiếm bài viết theo nội dung, mã ID..." oninput="debouncedSearch()">
           <select id="filterStatus" class="form-control" style="width:200px;" onchange="renderPosts(_allPostsCache)">
             <option value="completed" selected>✅ Bài đã đăng thành công</option>
             <option value="all">🌐 Tất cả danh sách bài viết</option>
@@ -750,12 +750,26 @@
       ? (window.location.origin || (window.location.protocol + '//' + window.location.host)) 
       : 'http://127.0.0.1:18923';
     let _allPostsCache = [];
+    let _lastPostsHash = "";
+    let _searchTimeout = null;
+
+    function debouncedSearch() {
+      if (_searchTimeout) clearTimeout(_searchTimeout);
+      _searchTimeout = setTimeout(() => {
+        renderPosts(_allPostsCache);
+      }, 300);
+    }
 
     async function loadPosts() {
       try {
         const res = await fetch(`${API_BASE}/api/posts`);
         if (!res.ok) return;
         const data = await res.json();
+        
+        const newHash = JSON.stringify(data);
+        if (newHash === _lastPostsHash) return;
+        _lastPostsHash = newHash;
+
         _allPostsCache = Array.isArray(data) ? data : (data.posts || []);
         
         // Update KPI Statistics
