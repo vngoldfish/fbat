@@ -3,684 +3,982 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>fbAUTO — Command Center</title>
+  <title>fbAUTO - Premium Admin Panel</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg-primary: #07090f;
-      --bg-card: rgba(13, 18, 30, 0.82);
-      --bg-card-hover: rgba(18, 24, 40, 0.9);
-      --bg-input: rgba(6, 10, 18, 0.85);
-      --border-color: rgba(255, 255, 255, 0.06);
-      --border-hover: rgba(255, 255, 255, 0.12);
-      --accent-blue: hsl(217, 91%, 60%);
-      --accent-indigo: hsl(239, 84%, 67%);
-      --accent-purple: hsl(263, 70%, 60%);
-      --accent-cyan: hsl(192, 91%, 60%);
-      --accent-green: hsl(160, 84%, 39%);
-      --accent-amber: hsl(38, 92%, 50%);
-      --accent-rose: hsl(347, 77%, 60%);
-      --text-primary: #f1f5f9;
-      --text-secondary: #94a3b8;
-      --text-dim: #475569;
-      --radius-sm: 8px;
-      --radius-md: 14px;
-      --radius-lg: 20px;
-      --radius-xl: 24px;
-      --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px var(--border-color);
-      --shadow-glow-blue: 0 0 20px rgba(59, 130, 246, 0.15);
-      --shadow-glow-green: 0 0 20px rgba(16, 185, 129, 0.15);
-      --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-      --transition-smooth: 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      --bg-primary: #050505;
+      --bg-card: rgba(15, 15, 20, 0.6);
+      --border-color: rgba(255, 255, 255, 0.08);
+      --border-glow: rgba(59, 130, 246, 0.3);
+      --accent-blue: #3b82f6;
+      --accent-indigo: #6366f1;
+      --accent-purple: #8b5cf6;
+      --accent-green: #10b981;
+      --accent-yellow: #f59e0b;
+      --accent-red: #ef4444;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
     }
 
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
     body {
-      font-family: 'Inter', system-ui, -apple-system, sans-serif;
-      background: var(--bg-primary);
-      color: var(--text-primary);
+      font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+      background-color: var(--bg-primary);
+      background-image: 
+        radial-gradient(circle at 15% 15%, rgba(59, 130, 246, 0.08) 0%, transparent 40%),
+        radial-gradient(circle at 85% 85%, rgba(139, 92, 246, 0.08) 0%, transparent 40%),
+        url('data:image/svg+xml;utf8,<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><filter id="noiseFilter"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(%23noiseFilter)" opacity="0.03"/></svg>');
+      color: var(--text-main);
       min-height: 100vh;
-      overflow-x: hidden;
+      padding: 16px 20px 40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
 
-    /* Ambient background */
-    body::before {
-      content: '';
-      position: fixed; inset: 0; z-index: 0; pointer-events: none;
-      background:
-        radial-gradient(ellipse 80% 60% at 10% 20%, hsla(217, 91%, 60%, 0.08) 0%, transparent 60%),
-        radial-gradient(ellipse 60% 80% at 90% 80%, hsla(263, 70%, 60%, 0.06) 0%, transparent 60%),
-        radial-gradient(ellipse 50% 50% at 50% 0%, hsla(192, 91%, 60%, 0.04) 0%, transparent 50%);
+    .app-container {
+      width: 100%;
+      max-width: 1300px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
     }
 
-    .app-shell {
-      position: relative; z-index: 1;
-      max-width: 1360px;
-      margin: 0 auto;
-      padding: 0 20px 40px;
-    }
-
-    /* ========== STATUS BAR ========== */
+    /* Status Bar */
     .status-bar {
-      position: sticky; top: 0; z-index: 50;
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 10px 24px;
-      background: rgba(7, 9, 15, 0.85);
-      backdrop-filter: blur(20px) saturate(180%);
-      border-bottom: 1px solid var(--border-color);
-      font-size: 12px; color: var(--text-secondary);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 16px;
+      background: rgba(10, 10, 15, 0.8);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
     }
-    .status-bar .status-left { display: flex; align-items: center; gap: 16px; }
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
     .status-dot {
-      width: 8px; height: 8px; border-radius: 50%;
-      background: #22c55e;
-      box-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
-      animation: pulse-dot 2s ease-in-out infinite;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent-green);
+      box-shadow: 0 0 8px var(--accent-green);
+      animation: pulse-dot 2s infinite;
     }
     @keyframes pulse-dot {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.6; transform: scale(0.85); }
-    }
-    .status-bar .brand {
-      display: flex; align-items: center; gap: 10px;
-      font-weight: 800; font-size: 15px; color: #fff; letter-spacing: -0.5px;
-    }
-    .brand-icon {
-      width: 28px; height: 28px; border-radius: 8px;
-      background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
-      display: flex; align-items: center; justify-content: center;
-      font-size: 14px;
-      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+      70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
     }
 
-    /* ========== NAVIGATION ========== */
-    .nav-strip {
-      display: flex; align-items: center; gap: 4px;
-      padding: 16px 0 12px;
-      border-bottom: 1px solid var(--border-color);
-      margin-bottom: 20px;
-      overflow-x: auto;
+    /* Top Navigation Header */
+    @keyframes spinPulse {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
     }
-    .nav-item {
-      padding: 8px 16px; border-radius: var(--radius-sm);
-      font-size: 13px; font-weight: 600;
-      color: var(--text-secondary); background: transparent; border: none;
-      cursor: pointer; white-space: nowrap;
-      transition: var(--transition-fast);
-      display: flex; align-items: center; gap: 6px;
+    .pulse-spinner {
+      width: 12px; height: 12px; border: 2px solid rgba(251,191,36,0.3);
+      border-top-color: #fbbf24; border-radius: 50%;
+      animation: spinPulse 0.8s linear infinite;
     }
-    .nav-item:hover { color: #fff; background: rgba(255,255,255,0.05); }
-    .nav-item.active {
-      color: #fff; background: rgba(59, 130, 246, 0.15);
-      box-shadow: inset 0 -2px 0 var(--accent-blue);
-    }
-    .nav-badge {
-      font-size: 10px; font-weight: 700; padding: 2px 7px;
-      border-radius: 10px; min-width: 20px; text-align: center;
-    }
-    .nav-badge.pending { background: rgba(245,158,11,0.2); color: #fbbf24; }
-    .nav-badge.success { background: rgba(34,197,94,0.2); color: #4ade80; }
 
-    /* ========== KPI GRID ========== */
-    .kpi-grid {
-      display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
-      margin-bottom: 20px;
-    }
-    .kpi-card {
+    .header-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
       background: var(--bg-card);
+      backdrop-filter: blur(20px);
       border: 1px solid var(--border-color);
-      border-radius: var(--radius-md);
-      padding: 16px 18px;
-      display: flex; align-items: center; gap: 14px;
-      transition: var(--transition-smooth);
-      position: relative; overflow: hidden;
+      border-radius: 20px;
+      padding: 16px 28px;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
     }
-    .kpi-card::before {
-      content: ''; position: absolute; inset: 0; border-radius: inherit; opacity: 0;
-      background: conic-gradient(from 180deg, transparent 60%, var(--kpi-accent, var(--accent-blue)) 100%);
-      transition: opacity 0.4s; z-index: -1; padding: 1px;
-    }
-    .kpi-card:hover { transform: translateY(-2px); border-color: var(--border-hover); }
-    .kpi-card:hover::before { opacity: 0.3; }
-    .kpi-icon {
-      width: 44px; height: 44px; border-radius: 12px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 20px; flex-shrink: 0;
-    }
-    .kpi-label { font-size: 11px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; }
-    .kpi-value { font-size: 26px; font-weight: 900; color: #fff; margin-top: 2px; font-variant-numeric: tabular-nums; }
 
-    /* ========== TAB PANELS ========== */
-    .tab-panel { display: none; animation: fadeUp 0.3s ease; }
-    .tab-panel.active { display: grid; }
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(8px); }
+    .brand-section {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .brand-logo {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      box-shadow: 0 8px 24px rgba(99, 102, 241, 0.3);
+    }
+
+    .brand-title h1 {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #ffffff, #cbd5e1);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .brand-title p {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 500;
+      margin-top: 2px;
+    }
+
+    .nav-tabs {
+      display: flex;
+      gap: 8px;
+      background: rgba(0, 0, 0, 0.3);
+      padding: 6px;
+      border-radius: 14px;
+      border: 1px solid var(--border-color);
+    }
+
+    .nav-tab-btn {
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-muted);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .nav-tab-btn:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .nav-tab-btn.active {
+      color: #fff;
+      background: linear-gradient(135deg, rgba(59,130,246,0.2), rgba(139,92,246,0.2));
+      box-shadow: inset 0 0 0 1px rgba(99, 102, 241, 0.3);
+    }
+
+    /* Tab Panes */
+    .tab-content {
+      display: none;
+      animation: fadeIn 0.4s ease forwards;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
       to { opacity: 1; transform: translateY(0); }
     }
 
-    .layout-split { grid-template-columns: 380px 1fr; gap: 20px; align-items: start; }
-    .layout-full { grid-template-columns: 1fr; }
+    .tab-content.active {
+      display: grid;
+    }
 
-    /* ========== GLASS CARD ========== */
-    .glass-card {
+    .posts-grid {
+      grid-template-columns: 1fr;
+      gap: 24px;
+    }
+    
+    @media (min-width: 1024px) {
+      .posts-grid {
+        grid-template-columns: 440px 1fr;
+        align-items: start;
+      }
+      .sticky-sidebar {
+        position: sticky;
+        top: 24px;
+      }
+    }
+
+    .accounts-grid {
+      grid-template-columns: 440px 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+
+    .logs-grid {
+      grid-template-columns: 1fr;
+      gap: 24px;
+    }
+
+    /* Cards */
+    .card {
       background: var(--bg-card);
-      backdrop-filter: blur(24px) saturate(180%);
+      backdrop-filter: blur(24px) saturate(150%);
       border: 1px solid var(--border-color);
-      border-radius: var(--radius-xl);
-      padding: 24px;
-      box-shadow: var(--shadow-card);
-      transition: border-color var(--transition-smooth);
+      border-radius: 24px;
+      padding: 28px;
+      box-shadow: 0 20px 48px rgba(0, 0, 0, 0.3);
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s ease;
     }
-    .glass-card:hover { border-color: var(--border-hover); }
-    .glass-card.sticky { position: sticky; top: 52px; }
+    
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: -1px;
+      border-radius: 25px;
+      padding: 1px;
+      background: conic-gradient(from var(--angle), transparent 70%, rgba(99,102,241,0.5), transparent 100%);
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      opacity: 0;
+      transition: opacity 0.5s;
+    }
+    
+    @property --angle {
+      syntax: '<angle>';
+      initial-value: 0deg;
+      inherits: false;
+    }
+    @keyframes rotate-gradient {
+      to { --angle: 360deg; }
+    }
+    
+    .card:hover::before {
+      opacity: 1;
+      animation: rotate-gradient 3s linear infinite;
+    }
 
-    .card-header {
-      display: flex; align-items: center; justify-content: space-between;
-      padding-bottom: 16px; margin-bottom: 16px;
-      border-bottom: 1px solid var(--border-color);
-    }
-    .card-header-left { display: flex; align-items: center; gap: 12px; }
-    .card-header-icon {
-      width: 36px; height: 36px; border-radius: 10px;
-      display: flex; align-items: center; justify-content: center; font-size: 17px;
-    }
-    .card-header-title { font-size: 15px; font-weight: 700; color: #fff; }
-    .card-header-sub { font-size: 11px; color: var(--text-secondary); margin-top: 1px; }
-    .api-badge {
-      font-size: 10px; font-weight: 800; padding: 4px 10px;
-      border-radius: 6px; letter-spacing: 0.5px;
-      background: rgba(59,130,246,0.15); color: #60a5fa;
-      border: 1px solid rgba(59,130,246,0.3);
-    }
-
-    /* ========== FORM ========== */
-    .form-stack { display: flex; flex-direction: column; gap: 14px; }
-    .form-section {
-      background: var(--bg-input); border: 1px solid var(--border-color);
-      border-radius: var(--radius-md); padding: 14px;
-      display: flex; flex-direction: column; gap: 10px;
-    }
-    .section-label {
-      font-size: 11px; font-weight: 800; color: var(--accent-indigo);
-      text-transform: uppercase; letter-spacing: 0.5px;
-      display: flex; align-items: center; gap: 6px;
-    }
-    .form-input {
-      width: 100%; padding: 11px 14px;
-      background: rgba(0,0,0,0.3); border: 1px solid var(--border-color);
-      border-radius: var(--radius-sm); color: #fff;
-      font-family: inherit; font-size: 13px;
-      transition: var(--transition-smooth);
-    }
-    .form-input:focus {
-      outline: none; border-color: var(--accent-blue);
-      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
-    }
-    textarea.form-input { min-height: 90px; resize: vertical; line-height: 1.6; }
-    .char-count { font-size: 10px; color: var(--text-dim); text-align: right; margin-top: -6px; }
-
-    /* Type pills */
-    .pill-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
-    .pill-btn {
-      padding: 10px 12px; border-radius: var(--radius-sm);
-      background: rgba(255,255,255,0.03); border: 1px solid var(--border-color);
-      color: var(--text-secondary); cursor: pointer;
-      font-family: inherit; font-size: 12.5px; font-weight: 600;
-      display: flex; align-items: center; justify-content: center; gap: 6px;
-      transition: var(--transition-smooth);
-    }
-    .pill-btn:hover { color: #fff; border-color: rgba(59,130,246,0.4); background: rgba(59,130,246,0.08); }
-    .pill-btn:active { transform: scale(0.97); }
-    .pill-btn.active {
+    .card-title {
+      font-size: 18px;
+      font-weight: 800;
       color: #fff;
-      background: linear-gradient(135deg, rgba(59,130,246,0.2), rgba(139,92,246,0.2));
-      border-color: rgba(99,102,241,0.5);
-      box-shadow: 0 0 12px rgba(99,102,241,0.15);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      letter-spacing: -0.3px;
     }
 
-    /* Dropzone */
+    .badge {
+      font-size: 12px;
+      font-weight: 700;
+      padding: 6px 12px;
+      border-radius: 8px;
+      background: rgba(59, 130, 246, 0.15);
+      color: #60a5fa;
+      border: 1px solid rgba(59, 130, 246, 0.25);
+    }
+
+    /* KPI Stats Overview Grid */
+    .stats-overview-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 20px;
+    }
+    
+    .stat-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .stat-card:hover {
+      transform: translateY(-4px) scale(1.02);
+      border-color: rgba(99, 102, 241, 0.4);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    }
+    
+    .stat-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+    }
+    
+    .stat-info {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .stat-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+    
+    .stat-value {
+      font-size: 28px;
+      font-weight: 800;
+      color: #fff;
+      margin-top: 4px;
+      line-height: 1;
+      display: inline-block;
+      transition: all 0.3s;
+    }
+
+    /* Form Controls */
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .form-group label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+
+    .form-control {
+      width: 100%;
+      padding: 14px 18px;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      color: #fff;
+      font-family: inherit;
+      font-size: 14px;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .form-control:focus {
+      outline: none;
+      border-color: var(--accent-blue);
+      box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
+      background: rgba(10, 16, 28, 0.8);
+    }
+
+    textarea.form-control {
+      min-height: 120px;
+      resize: vertical;
+    }
+    
+    .char-count {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-align: right;
+      margin-top: -6px;
+      padding-right: 4px;
+    }
+
+    .btn {
+      padding: 12px 24px;
+      border-radius: 14px;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn:active {
+      transform: scale(0.96);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
+      color: #fff;
+      box-shadow: 0 8px 24px rgba(99, 102, 241, 0.3);
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      box-shadow: 0 12px 32px rgba(99, 102, 241, 0.5);
+    }
+
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .btn-danger:hover {
+      background: rgba(239, 68, 68, 0.3);
+      color: #fff;
+    }
+
+    .btn-xs {
+      padding: 8px 14px;
+      font-size: 12px;
+      border-radius: 10px;
+    }
+    
+    .btn-icon {
+      padding: 8px;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.05);
+      color: var(--text-muted);
+      border: 1px solid var(--border-color);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-icon:hover {
+      background: rgba(255,255,255,0.1);
+      color: #fff;
+    }
+
+    /* List items */
+    .item-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      max-height: 700px;
+      overflow-y: auto;
+      padding-right: 8px;
+    }
+
+    .item-list::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .item-list::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 6px;
+    }
+
+    .item-list::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    .list-card {
+      background: rgba(10, 10, 14, 0.5);
+      border: 1px solid var(--border-color);
+      border-radius: 18px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      animation: slideIn 0.4s ease forwards;
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    
+    @keyframes slideIn {
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .list-card:nth-child(1) { animation-delay: 0.05s; }
+    .list-card:nth-child(2) { animation-delay: 0.1s; }
+    .list-card:nth-child(3) { animation-delay: 0.15s; }
+    .list-card:nth-child(4) { animation-delay: 0.2s; }
+    .list-card:nth-child(5) { animation-delay: 0.25s; }
+
+    .list-card:hover {
+      transform: translateY(-3px);
+      border-color: rgba(99, 102, 241, 0.4);
+      background: rgba(15, 15, 22, 0.8);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
+    }
+
+    .status-badge {
+      font-size: 12px;
+      font-weight: 700;
+      padding: 6px 12px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .status-pending { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+    .status-in_progress { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
+    .status-completed { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .status-failed { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+
+    /* Wizard Post Selector Pills */
+    .post-type-selector {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .type-pill-btn {
+      padding: 14px;
+      border-radius: 16px;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .type-pill-btn:hover {
+      color: #fff;
+      border-color: rgba(99, 102, 241, 0.4);
+      background: rgba(99, 102, 241, 0.1);
+    }
+
+    .type-pill-btn.active {
+      color: #fff;
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(139, 92, 246, 0.2));
+      border: 1px solid rgba(99, 102, 241, 0.5);
+      box-shadow: inset 0 0 0 1px rgba(99, 102, 241, 0.2), 0 8px 20px rgba(99, 102, 241, 0.15);
+    }
+
+    .preset-time-btn {
+      padding: 8px 14px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 700;
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-muted);
+      border: 1px solid var(--border-color);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .preset-time-btn:hover {
+      background: rgba(59, 130, 246, 0.15);
+      color: #60a5fa;
+      border-color: rgba(59, 130, 246, 0.4);
+    }
+    
+    .sub-panel {
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid rgba(255,255,255,0.04);
+      border-radius: 20px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      transition: border-color 0.3s;
+    }
+    .sub-panel:hover {
+      border-color: rgba(255,255,255,0.08);
+    }
+    
+    .sub-panel-title {
+      color: #818cf8;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    
     .dropzone {
-      border: 2px dashed rgba(59,130,246,0.3); border-radius: var(--radius-md);
-      padding: 18px; text-align: center; cursor: pointer;
-      background: linear-gradient(135deg, rgba(59,130,246,0.04), rgba(139,92,246,0.03));
-      transition: var(--transition-smooth);
-      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
-      min-height: 80px;
+      border: 2px dashed rgba(99,102,241,0.4);
+      border-radius: 16px;
+      padding: 28px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      background: linear-gradient(135deg, rgba(59,130,246,0.05), rgba(139,92,246,0.05));
+      min-height: 120px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
     }
-    .dropzone:hover, .dropzone.drag-over {
-      border-color: var(--accent-blue); background: rgba(59,130,246,0.08);
+    .dropzone:hover {
+      border-color: rgba(99,102,241,0.8);
+      background: linear-gradient(135deg, rgba(59,130,246,0.1), rgba(139,92,246,0.1));
     }
-    .dropzone-btn {
-      display: inline-flex; align-items: center; gap: 6px;
-      padding: 8px 16px; border-radius: 8px;
-      background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
-      color: #fff; font-weight: 700; font-size: 12px; border: none;
-      box-shadow: 0 4px 12px rgba(59,130,246,0.3);
-      pointer-events: none;
-    }
-    .dropzone-hint { font-size: 11px; color: var(--text-dim); }
-    #mediaPreview { display:none; width:100%; max-height:140px; overflow:hidden; border-radius:8px; }
-    #mediaFileInfo {
-      display:none; padding:8px 12px; background:rgba(59,130,246,0.1);
-      border:1px solid rgba(59,130,246,0.25); border-radius:8px;
-      align-items:center; justify-content:space-between; font-size: 12px;
-    }
-    .file-remove-btn {
-      background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3);
-      color:#f87171; cursor:pointer; font-size:11px; font-weight:700;
-      padding:3px 8px; border-radius:5px;
+    .dropzone.dragover {
+      border-color: #3b82f6;
+      background: rgba(59,130,246,0.15);
+      transform: scale(1.02);
     }
 
-    /* Target row */
-    .target-row { display: grid; grid-template-columns: 130px 1fr; gap: 8px; }
-
-    /* Schedule row */
-    .schedule-row { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
-    .preset-btn {
-      padding: 5px 10px; border-radius: 6px; font-size: 11px; font-weight: 700;
-      background: rgba(255,255,255,0.04); color: var(--text-secondary);
-      border: 1px solid var(--border-color); cursor: pointer;
-      transition: var(--transition-fast);
-    }
-    .preset-btn:hover { background: rgba(59,130,246,0.15); color: #60a5fa; border-color: rgba(59,130,246,0.3); }
-    .preset-btn:active { transform: scale(0.95); }
-
-    /* Submit */
-    .submit-btn {
-      width: 100%; padding: 14px; border: none; border-radius: var(--radius-md);
-      font-family: inherit; font-size: 14px; font-weight: 800;
-      color: #fff; cursor: pointer; letter-spacing: 0.2px;
-      background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-purple) 100%);
-      box-shadow: 0 8px 24px rgba(59,130,246,0.35);
-      transition: var(--transition-smooth);
-      display: flex; align-items: center; justify-content: center; gap: 8px;
-    }
-    .submit-btn:hover { transform: translateY(-1px); box-shadow: 0 12px 32px rgba(59,130,246,0.45); }
-    .submit-btn:active { transform: scale(0.98); }
-
-    /* ========== LIST ========== */
-    .list-scroll {
-      display: flex; flex-direction: column; gap: 10px;
-      max-height: 75vh; overflow-y: auto; padding-right: 4px;
-    }
-    .list-scroll::-webkit-scrollbar { width: 4px; }
-    .list-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
-
-    .post-card {
-      background: rgba(10, 14, 24, 0.7); border: 1px solid var(--border-color);
-      border-radius: var(--radius-md); padding: 14px 16px;
-      display: flex; flex-direction: column; gap: 8px;
-      transition: var(--transition-smooth);
-    }
-    .post-card:hover { border-color: var(--border-hover); background: var(--bg-card-hover); }
-    .post-card.running { border-color: rgba(59,130,246,0.35); box-shadow: var(--shadow-glow-blue); }
-    .post-card.done { border-color: rgba(34,197,94,0.2); }
-
-    .post-top { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; }
-    .tag {
-      font-size: 10px; font-weight: 700; padding: 3px 8px;
-      border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;
-    }
-    .tag-type { background: rgba(99,102,241,0.15); color: #a5b4fc; }
-    .tag-target { background: rgba(236,72,153,0.12); color: #f9a8d4; }
-
-    .status-chip {
-      font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 8px;
-      display: inline-flex; align-items: center; gap: 5px;
-    }
-    .status-pending { background: rgba(148,163,184,0.12); color: #cbd5e1; }
-    .status-in_progress { background: rgba(59,130,246,0.12); color: #60a5fa; }
-    .status-completed { background: rgba(34,197,94,0.12); color: #4ade80; }
-    .status-failed { background: rgba(239,68,68,0.12); color: #f87171; }
-
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .spinner {
-      width: 10px; height: 10px; border: 2px solid rgba(96,165,250,0.3);
-      border-top-color: #60a5fa; border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-    }
-
-    .post-content { font-size: 13px; color: #e2e8f0; line-height: 1.5; }
-    .post-meta { font-size: 11px; color: var(--text-dim); display: flex; align-items: center; gap: 4px; }
-    .post-meta a { color: var(--accent-cyan); text-decoration: none; }
-    .post-meta a:hover { text-decoration: underline; }
-
-    .progress-strip {
-      padding: 8px 12px; border-radius: 8px; font-size: 11px; font-weight: 600;
-      display: flex; align-items: center; gap: 6px;
-    }
-    .progress-strip.blue { background: rgba(59,130,246,0.1); color: #60a5fa; border: 1px solid rgba(59,130,246,0.2); }
-    .progress-strip.green { background: rgba(34,197,94,0.1); color: #4ade80; border: 1px solid rgba(34,197,94,0.2); }
-    .progress-strip.red { background: rgba(239,68,68,0.1); color: #f87171; border: 1px solid rgba(239,68,68,0.2); }
-
-    .fb-link {
-      display: inline-flex; align-items: center; gap: 5px;
-      padding: 6px 12px; border-radius: 7px; font-size: 11px; font-weight: 700;
-      text-decoration: none; color: #fff;
-      background: linear-gradient(135deg, #10b981, #059669);
-      box-shadow: 0 2px 8px rgba(16,185,129,0.3);
-      transition: var(--transition-fast);
-    }
-    .fb-link:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(16,185,129,0.4); }
-
-    .post-footer {
-      display: flex; justify-content: space-between; align-items: center;
-      padding-top: 8px; border-top: 1px solid var(--border-color);
-    }
-    .post-id { font-size: 10px; color: var(--text-dim); }
-    .post-actions { display: flex; gap: 4px; }
-    .action-btn {
-      padding: 5px 10px; border-radius: 6px;
-      font-family: inherit; font-size: 11px; font-weight: 600;
-      border: 1px solid var(--border-color); cursor: pointer;
-      transition: var(--transition-fast);
-    }
-    .action-btn:active { transform: scale(0.95); }
-    .action-btn.primary { background: rgba(59,130,246,0.15); color: #60a5fa; border-color: rgba(59,130,246,0.3); }
-    .action-btn.primary:hover { background: rgba(59,130,246,0.25); }
-    .action-btn.ghost { background: rgba(255,255,255,0.04); color: var(--text-secondary); }
-    .action-btn.ghost:hover { background: rgba(255,255,255,0.08); color: #fff; }
-    .action-btn.danger { background: rgba(239,68,68,0.1); color: #f87171; border-color: rgba(239,68,68,0.2); }
-    .action-btn.danger:hover { background: rgba(239,68,68,0.2); }
-
-    /* Search bar */
-    .search-bar { display: flex; gap: 8px; margin-bottom: 12px; }
-    .search-bar .form-input { flex: 1; }
-    .search-bar select.form-input { width: 180px; flex: none; }
-
-    /* Logs */
-    .log-entry {
-      padding: 8px 12px; background: rgba(10,14,24,0.6);
-      border: 1px solid var(--border-color); border-radius: 8px;
-      font-size: 12px; display: flex; flex-direction: column; gap: 3px;
-    }
-    .log-top { display: flex; justify-content: space-between; align-items: center; }
-    .log-action {
-      padding: 2px 7px; border-radius: 5px; font-weight: 700; font-size: 10px;
-    }
-    .log-time { color: var(--text-dim); font-size: 10px; }
-
-    /* Empty state */
-    .empty-state { text-align: center; padding: 40px; color: var(--text-dim); font-size: 13px; }
-
-    /* Toast */
-    .toast-container {
-      position: fixed; bottom: 20px; right: 20px; z-index: 200;
-      display: flex; flex-direction: column; gap: 8px;
-    }
     .toast {
-      padding: 12px 20px; border-radius: var(--radius-sm);
-      background: rgba(13, 18, 30, 0.95); backdrop-filter: blur(16px);
-      border: 1px solid rgba(59,130,246,0.3);
-      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-      font-size: 13px; font-weight: 600; color: #fff;
-      transform: translateX(120%); opacity: 0;
-      transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      padding: 16px 28px;
+      border-radius: 16px;
+      background: rgba(15, 15, 20, 0.95);
+      backdrop-filter: blur(24px);
+      border: 1px solid rgba(99, 102, 241, 0.4);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+      font-size: 14px;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transform: translateX(120%);
+      transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 100;
     }
-    .toast.show { transform: translateX(0); opacity: 1; }
-
-    /* Skeleton */
-    @keyframes shimmer {
-      0% { background-position: -200% 0; }
-      100% { background-position: 200% 0; }
+    
+    .toast.show {
+      transform: translateX(0);
     }
-    .skeleton {
-      height: 80px; border-radius: var(--radius-md);
-      background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.03) 75%);
-      background-size: 200% 100%;
+    
+    /* Progress Bar */
+    .progress-bar-container {
+      height: 6px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+      width: 0%;
+      transition: width 0.3s ease;
+      position: relative;
+    }
+    .progress-bar::after {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
       animation: shimmer 1.5s infinite;
     }
-
-    /* Responsive */
-    @media (max-width: 768px) {
-      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
-      .layout-split { grid-template-columns: 1fr; }
-      .glass-card.sticky { position: static; }
-      .nav-strip { padding: 12px 0 8px; }
+    @keyframes shimmer {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
     }
-
-    /* Staggered entrance */
-    .kpi-card { opacity: 0; animation: fadeUp 0.4s ease forwards; }
-    .kpi-card:nth-child(1) { animation-delay: 0.05s; }
-    .kpi-card:nth-child(2) { animation-delay: 0.1s; }
-    .kpi-card:nth-child(3) { animation-delay: 0.15s; }
-    .kpi-card:nth-child(4) { animation-delay: 0.2s; }
-
-    /* Hidden select */
-    #postType { display: none; }
+    
+    .skeleton-box {
+      background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.05) 75%);
+      background-size: 200% 100%;
+      animation: skeleton-loading 1.5s infinite;
+      border-radius: 8px;
+    }
+    @keyframes skeleton-loading {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
   </style>
 </head>
 <body>
-  <div class="app-shell">
-
-    <!-- Status Bar -->
+  <div class="app-container">
     <div class="status-bar">
-      <div class="status-left">
-        <div class="brand">
-          <div class="brand-icon">⚡</div>
-          fbAUTO
-        </div>
-        <span style="display:flex;align-items:center;gap:6px;">
-          <span class="status-dot"></span> Server đang hoạt động
-        </span>
-        <span id="lastSyncTime">Đồng bộ: —</span>
+      <div class="status-item">
+        <div class="status-dot"></div>
+        <span>System Online - Port 18923</span>
       </div>
-      <span style="font-size:11px;color:var(--text-dim);">Command Center v2.0 • Port 18923</span>
-    </div>
-
-    <!-- Navigation -->
-    <nav class="nav-strip">
-      <button class="nav-item active" data-tab="tabPosts">📅 Lên Lịch <span class="nav-badge pending" id="navPendingBadge">0</span></button>
-      <button class="nav-item" data-tab="tabCompleted">✅ Đã Đăng <span class="nav-badge success" id="navCompletedBadge">0</span></button>
-      <button class="nav-item" data-tab="tabAccounts">👤 Tài Khoản</button>
-      <button class="nav-item" data-tab="tabLogs">📊 Logs</button>
-    </nav>
-
-    <!-- KPI Stats -->
-    <div class="kpi-grid">
-      <div class="kpi-card" style="--kpi-accent: var(--accent-blue);">
-        <div class="kpi-icon" style="background:linear-gradient(135deg,rgba(59,130,246,0.15),rgba(37,99,235,0.3)); border:1px solid rgba(59,130,246,0.25);">📝</div>
-        <div>
-          <div class="kpi-label">Tổng bài</div>
-          <div class="kpi-value" id="statTotalPosts">0</div>
-        </div>
-      </div>
-      <div class="kpi-card" style="--kpi-accent: var(--accent-amber);">
-        <div class="kpi-icon" style="background:linear-gradient(135deg,rgba(245,158,11,0.15),rgba(217,119,6,0.3)); border:1px solid rgba(245,158,11,0.25);">⏳</div>
-        <div>
-          <div class="kpi-label">Đang chờ</div>
-          <div class="kpi-value" id="statPendingPosts" style="color:#fbbf24;">0</div>
-        </div>
-      </div>
-      <div class="kpi-card" style="--kpi-accent: var(--accent-green);">
-        <div class="kpi-icon" style="background:linear-gradient(135deg,rgba(16,185,129,0.15),rgba(5,150,105,0.3)); border:1px solid rgba(16,185,129,0.25);">✅</div>
-        <div>
-          <div class="kpi-label">Thành công</div>
-          <div class="kpi-value" id="statCompletedPosts" style="color:#34d399;">0</div>
-        </div>
-      </div>
-      <div class="kpi-card" style="--kpi-accent: var(--accent-purple);">
-        <div class="kpi-icon" style="background:linear-gradient(135deg,rgba(139,92,246,0.15),rgba(124,58,237,0.3)); border:1px solid rgba(139,92,246,0.25);">💬</div>
-        <div>
-          <div class="kpi-label">Seeding</div>
-          <div class="kpi-value" id="statSeedingCount" style="color:#c084fc;">0</div>
-        </div>
+      <div class="status-item">
+        <span id="lastSyncTime">Last sync: Just now</span>
       </div>
     </div>
 
-    <!-- Tab 1: Posts -->
-    <div class="tab-panel layout-split active" id="tabPosts">
-      <div class="glass-card sticky">
-        <div class="card-header">
-          <div class="card-header-left">
-            <div class="card-header-icon" style="background:linear-gradient(135deg,var(--accent-blue),var(--accent-purple)); box-shadow:0 4px 12px rgba(59,130,246,0.3);">✨</div>
-            <div>
-              <div class="card-header-title">Lên Lịch Bài Mới</div>
-              <div class="card-header-sub">Tự động đăng ngầm qua GraphQL API</div>
-            </div>
-          </div>
-          <span class="api-badge">⚡ DIRECT API</span>
+    <!-- Navigation Header -->
+    <header class="header-nav">
+      <div class="brand-section">
+        <div class="brand-logo">🚀</div>
+        <div class="brand-title">
+          <h1>fbAUTO Workspace</h1>
+          <p>Premium Python Backend Engine</p>
         </div>
+      </div>
 
-        <form id="formPost" onsubmit="return false;" class="form-stack">
-          <select id="postType"><option value="post" selected>post</option><option value="video">video</option><option value="reel">reel</option><option value="story">story</option></select>
+      <div class="nav-tabs">
+        <button class="nav-tab-btn active" data-tab="tabPosts">
+          📅 Lên Lịch & Đang Chờ 
+          <span id="navPendingBadge" class="badge" style="background:rgba(245,158,11,0.2); color:#fbbf24; margin-left:4px;">0</span>
+        </button>
+        <button class="nav-tab-btn" data-tab="tabCompleted">
+          ✅ Đã Đăng 
+          <span id="navCompletedBadge" class="badge" style="background:rgba(16,185,129,0.2); color:#34d399; margin-left:4px;">0</span>
+        </button>
+        <button class="nav-tab-btn" data-tab="tabAccounts">👤 Tài Khoản</button>
+        <button class="nav-tab-btn" data-tab="tabLogs">📊 Logs</button>
+      </div>
+    </header>
 
-          <div class="form-section">
-            <span class="section-label">1️⃣ Định dạng</span>
-            <div class="pill-grid">
-              <button type="button" class="pill-btn active" data-type="post" onclick="selectPostTypePill('post', this)">📝 Feed Post</button>
-              <button type="button" class="pill-btn" data-type="video" onclick="selectPostTypePill('video', this)">🎥 Video</button>
-              <button type="button" class="pill-btn" data-type="reel" onclick="selectPostTypePill('reel', this)">🎬 Reels</button>
-              <button type="button" class="pill-btn" data-type="story" onclick="selectPostTypePill('story', this)">📲 Story</button>
-            </div>
-          </div>
+    <!-- KPI Stats Overview Grid -->
+    <div class="stats-overview-grid">
+      <div class="stat-card">
+        <div class="stat-icon" style="background:linear-gradient(135deg,rgba(59,130,246,0.15),rgba(37,99,235,0.3)); color:#60a5fa; border:1px solid rgba(59,130,246,0.2);">📝</div>
+        <div class="stat-info">
+          <div class="stat-label">TỔNG BÀI HỆ THỐNG</div>
+          <div class="stat-value" id="statTotalPosts">0</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:linear-gradient(135deg,rgba(245,158,11,0.15),rgba(217,119,6,0.3)); color:#fbbf24; border:1px solid rgba(245,158,11,0.2);">⏳</div>
+        <div class="stat-info">
+          <div class="stat-label">BÀI ĐANG CHỜ ĐĂNG</div>
+          <div class="stat-value" id="statPendingPosts" style="color:#fbbf24;">0</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:linear-gradient(135deg,rgba(16,185,129,0.15),rgba(5,150,105,0.3)); color:#34d399; border:1px solid rgba(16,185,129,0.2);">✅</div>
+        <div class="stat-info">
+          <div class="stat-label">ĐÃ ĐĂNG THÀNH CÔNG</div>
+          <div class="stat-value" id="statCompletedPosts" style="color:#34d399;">0</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:linear-gradient(135deg,rgba(139,92,246,0.15),rgba(124,58,237,0.3)); color:#c084fc; border:1px solid rgba(139,92,246,0.2);">💬</div>
+        <div class="stat-info">
+          <div class="stat-label">BÌNH LUẬN SEEDING</div>
+          <div class="stat-value" id="statSeedingCount" style="color:#c084fc;">0</div>
+        </div>
+      </div>
+    </div>
 
-          <div class="form-section">
-            <span class="section-label">2️⃣ Nội dung & Media</span>
-            <textarea id="postContent" class="form-input" placeholder="Nhập nội dung bài viết..." oninput="updateCharCount(this)"></textarea>
-            <div class="char-count" id="charCount">0 ký tự</div>
-
-            <div class="dropzone" id="mediaDropZone" onclick="document.getElementById('mediaFileInput').click()">
-              <div id="mediaPreview"></div>
-              <div id="mediaDropText">
-                <div class="dropzone-btn">📤 Chọn Ảnh / Video</div>
-                <div class="dropzone-hint">hoặc <b>kéo thả</b> file vào đây</div>
-              </div>
-              <input type="file" id="mediaFileInput" accept="image/*,video/*" style="display:none;" onchange="handleAdminMediaFile(this.files[0])">
-            </div>
-            <div id="mediaFileInfo">
-              <span id="mediaFileName" style="color:#60a5fa;font-weight:600;"></span>
-              <button type="button" onclick="clearAdminMedia()" class="file-remove-btn">✕ Xóa</button>
-            </div>
-
-            <input type="url" id="postMediaUrl" class="form-input" style="font-size:12px;" placeholder="🔗 Hoặc dán URL Media (https://...)">
-          </div>
-
-          <div class="form-section">
-            <span class="section-label">3️⃣ Kênh & Seeding</span>
-            <div class="target-row">
-              <select id="postTargetType" class="form-input" style="font-size:12px;">
-                <option value="profile">👤 Cá Nhân</option>
-                <option value="page">🚩 Fanpage</option>
-                <option value="group">👥 Group</option>
-              </select>
-              <input type="text" id="postTargetId" class="form-input" style="font-size:12px;" placeholder="ID Fanpage / Group (trống = cá nhân)">
-            </div>
-            <textarea id="postSeedingComments" class="form-input" rows="2" style="font-size:12px;min-height:50px;" placeholder="💬 Bình luận seeding (mỗi câu 1 dòng)..."></textarea>
-          </div>
-
-          <div class="form-section">
-            <div class="schedule-row">
-              <span class="section-label" style="margin:0;">4️⃣ Thời gian</span>
-              <div style="display:flex;gap:4px;">
-                <button type="button" class="preset-btn" onclick="setPresetSchedule(0)">⚡ Ngay</button>
-                <button type="button" class="preset-btn" onclick="setPresetSchedule(5)">+5p</button>
-                <button type="button" class="preset-btn" onclick="setPresetSchedule(30)">+30p</button>
+    <!-- Tab 1: Posts Management -->
+    <div class="tab-content posts-grid active" id="tabPosts">
+      <!-- Post Creation Glass Panel (Sticky on Desktop) -->
+      <div class="sticky-sidebar">
+        <div class="card" style="border: 1px solid rgba(99, 102, 241, 0.3); box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.1);">
+          <div class="card-title" style="padding-bottom:16px; border-bottom:1px solid rgba(255,255,255,0.08);">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <div style="width:40px; height:40px; border-radius:12px; background:linear-gradient(135deg,#3b82f6,#8b5cf6); display:flex; align-items:center; justify-content:center; font-size:20px; box-shadow:0 6px 20px rgba(99,102,241,0.4);">✨</div>
+              <div>
+                <div style="font-size:18px; font-weight:800; color:#fff; letter-spacing:-0.2px;">Lên Lịch Bài Đăng</div>
+                <div style="font-size:12px; color:var(--text-muted); font-weight:500;">Tự động đăng ngầm qua GraphQL</div>
               </div>
             </div>
-            <input type="datetime-local" id="postScheduledTime" class="form-input" required>
+            <span class="badge" style="background:rgba(99,102,241,0.2); color:#a78bfa; border:1px solid rgba(99,102,241,0.4);">⚡ DIRECT API</span>
           </div>
 
-          <input type="hidden" id="postAccessToken" value="">
-          <input type="hidden" id="postRepeat" value="0">
+          <form id="formPost" onsubmit="return false;" style="display:flex; flex-direction:column; gap:16px; margin-top:8px;">
+            <!-- Hidden select for compatibility -->
+            <select id="postType" style="display:none;">
+              <option value="post" selected>post</option>
+              <option value="video">video</option>
+              <option value="reel">reel</option>
+              <option value="story">story</option>
+            </select>
 
-          <button type="submit" class="submit-btn">🚀 Phát Lệnh Đăng Bài</button>
-        </form>
+            <!-- SUB-PANEL 1: Format Selector -->
+            <div class="sub-panel">
+              <label class="sub-panel-title"><span>1️⃣ ĐỊNH DẠNG</span></label>
+              <div class="post-type-selector">
+                <button type="button" class="type-pill-btn active" data-type="post" onclick="selectPostTypePill('post', this)">
+                  <span>📝</span> Feed Post
+                </button>
+                <button type="button" class="type-pill-btn" data-type="video" onclick="selectPostTypePill('video', this)">
+                  <span>🎥</span> Video
+                </button>
+                <button type="button" class="type-pill-btn" data-type="reel" onclick="selectPostTypePill('reel', this)">
+                  <span>🎬</span> Reels
+                </button>
+                <button type="button" class="type-pill-btn" data-type="story" onclick="selectPostTypePill('story', this)">
+                  <span>📲</span> Story
+                </button>
+              </div>
+            </div>
+
+            <!-- SUB-PANEL 2: Content & Media Upload -->
+            <div class="sub-panel">
+              <label for="postContent" class="sub-panel-title"><span>2️⃣ NỘI DUNG & TỆP</span></label>
+              <div>
+                <textarea id="postContent" class="form-control" placeholder="Nhập nội dung bài viết, caption hoặc mô tả sản phẩm ở đây..." oninput="updateCharCount(this)"></textarea>
+                <div class="char-count" id="contentCharCount">0 ký tự</div>
+              </div>
+
+              <div id="mediaDropZone" class="dropzone" onclick="document.getElementById('mediaFileInput').click()">
+                <div id="mediaPreview" style="display:none; width:100%; max-height:180px; overflow:hidden; border-radius:12px; margin-bottom:8px; box-shadow:0 8px 24px rgba(0,0,0,0.3);"></div>
+                <div id="mediaDropText">
+                  <div class="btn btn-primary" style="padding:10px 20px; border-radius:12px; font-size:13px; pointer-events:none;">
+                    📤 Chọn File Media
+                  </div>
+                  <div style="font-size:12px; color:var(--text-muted); margin-top:10px;">hoặc <b>kéo thả file</b> trực tiếp vào khung này</div>
+                </div>
+                <input type="file" id="mediaFileInput" accept="image/*,video/*" style="display:none;" onchange="handleAdminMediaFile(this.files[0])">
+              </div>
+              <div id="mediaFileInfo" style="display:none; padding:12px 16px; background:rgba(59,130,246,0.1); border:1px solid rgba(59,130,246,0.3); border-radius:12px; align-items:center; justify-content:space-between; animation:fadeIn 0.3s;">
+                <span id="mediaFileName" style="font-size:13px; color:#60a5fa; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:70%;"></span>
+                <button type="button" class="btn-danger btn-xs" onclick="clearAdminMedia()" style="padding:6px 12px;">✕ Xóa</button>
+              </div>
+
+              <input type="url" id="postMediaUrl" class="form-control" placeholder="🔗 Hoặc dán Link URL Media trực tiếp (https://...)">
+            </div>
+
+            <!-- SUB-PANEL 3: Target Channel & Seeding -->
+            <div class="sub-panel">
+              <label class="sub-panel-title"><span>3️⃣ KÊNH ĐĂNG & SEEDING</span></label>
+              <div style="display:flex; gap:12px;">
+                <select id="postTargetType" class="form-control" style="flex:1;">
+                  <option value="profile">👤 Cá Nhân</option>
+                  <option value="page">🚩 Fanpage</option>
+                  <option value="group">👨‍👩‍👧‍👦 Group</option>
+                </select>
+                <input type="text" id="postTargetId" class="form-control" style="flex:2;" placeholder="ID Fanpage / Group (Tùy chọn)">
+              </div>
+              <textarea id="postSeedingComments" class="form-control" rows="2" placeholder="💬 Bình luận seeding tự động (Mỗi câu 1 dòng)..."></textarea>
+            </div>
+
+            <!-- SUB-PANEL 4: Schedule Timer & Submit -->
+            <div class="sub-panel">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <label for="postScheduledTime" class="sub-panel-title">4️⃣ THỜI GIAN</label>
+                <div style="display:flex; gap:8px;">
+                  <button type="button" class="preset-time-btn" onclick="setPresetSchedule(0)">⚡ Ngay</button>
+                  <button type="button" class="preset-time-btn" onclick="setPresetSchedule(5)">+5m</button>
+                  <button type="button" class="preset-time-btn" onclick="setPresetSchedule(30)">+30m</button>
+                </div>
+              </div>
+              <input type="datetime-local" id="postScheduledTime" class="form-control" required>
+            </div>
+
+            <input type="hidden" id="postAccessToken" value="">
+            <input type="hidden" id="postRepeat" value="0">
+
+            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 8px; padding: 18px; font-size: 16px; font-weight: 800; border-radius: 18px; letter-spacing: 0.5px; position:relative; overflow:hidden;">
+              <span>🚀</span> PHÁT LỆNH ĐĂNG BÀI
+            </button>
+          </form>
+        </div>
       </div>
 
-      <div class="glass-card">
-        <div class="card-header">
-          <span style="font-size:15px;font-weight:700;">📋 Bài đang chờ</span>
-          <span class="api-badge" id="postsCount">0 bài</span>
+      <div class="card">
+        <div class="card-title">
+          <span>📋 Danh Sách Đang Chờ</span>
+          <span class="badge" id="postsCount">0 bài</span>
         </div>
-        <div class="list-scroll" id="postsList">
-          <div class="skeleton"></div><div class="skeleton"></div>
+
+        <div class="item-list" id="postsList">
+          <!-- Skeleton Loading -->
+          <div class="list-card skeleton-card">
+            <div class="skeleton-box" style="height:20px; width:40%; margin-bottom:12px;"></div>
+            <div class="skeleton-box" style="height:14px; width:100%; margin-bottom:8px;"></div>
+            <div class="skeleton-box" style="height:14px; width:80%;"></div>
+          </div>
+          <div class="list-card skeleton-card">
+            <div class="skeleton-box" style="height:20px; width:50%; margin-bottom:12px;"></div>
+            <div class="skeleton-box" style="height:14px; width:90%;"></div>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Tab 2: Completed -->
-    <div class="tab-panel layout-full" id="tabCompleted">
-      <div class="glass-card">
-        <div class="card-header">
-          <span style="font-size:15px;font-weight:700;">🌐 Quản Lý Bài Đã Đăng</span>
-          <span class="api-badge" id="completedCount" style="background:rgba(34,197,94,0.15);color:#4ade80;border-color:rgba(34,197,94,0.3);">0 bài</span>
+    <!-- Tab 2: Published Posts Management -->
+    <div class="tab-content logs-grid" id="tabCompleted">
+      <div class="card">
+        <div class="card-title">
+          <span>🌐 Quản Lý Bài Đã Đăng</span>
+          <span class="badge" id="completedCount" style="background:rgba(16,185,129,0.2); color:#34d399; border:1px solid rgba(16,185,129,0.4);">0 bài</span>
         </div>
-        <div class="search-bar">
-          <input type="text" id="searchCompleted" class="form-input" placeholder="🔍 Tìm kiếm bài viết..." oninput="debouncedSearch()">
-          <select id="filterStatus" class="form-input" onchange="renderPosts(_allPostsCache)">
-            <option value="completed" selected>✅ Đã đăng</option>
-            <option value="all">🌐 Tất cả</option>
-            <option value="failed">❌ Lỗi</option>
-            <option value="pending">⏳ Chờ</option>
+
+        <div style="display:flex; gap:16px; margin-bottom:16px; align-items:center;">
+          <input type="text" id="searchCompleted" class="form-control" style="flex:1;" placeholder="🔍 Tìm kiếm bài viết..." oninput="debouncedSearch()">
+          <select id="filterStatus" class="form-control" style="width:240px;" onchange="renderPosts(_allPostsCache)">
+            <option value="completed" selected>✅ Đã đăng thành công</option>
+            <option value="all">🌐 Tất cả bài viết</option>
+            <option value="failed">❌ Bị lỗi / thất bại</option>
+            <option value="pending">⏳ Đang chờ</option>
           </select>
         </div>
-        <div class="list-scroll" id="completedList">
-          <div class="skeleton"></div>
+
+        <div class="item-list" id="completedList">
+          <div style="text-align: center; padding: 40px; color: var(--text-dim);">Chưa có dữ liệu.</div>
         </div>
       </div>
     </div>
 
-    <!-- Tab 3: Accounts -->
-    <div class="tab-panel layout-split" id="tabAccounts">
-      <div class="glass-card">
-        <div class="card-header">
-          <span style="font-size:15px;font-weight:700;">👤 Thêm Tài Khoản</span>
+    <!-- Tab 3: Accounts Management -->
+    <div class="tab-content accounts-grid" id="tabAccounts">
+      <div class="card sticky-sidebar">
+        <div class="card-title">
+          <span>👤 Thêm Tài Khoản</span>
         </div>
-        <form id="formAccount" onsubmit="return false;" class="form-stack">
-          <div class="form-section">
-            <label class="section-label">Tên tài khoản</label>
-            <input type="text" id="accName" class="form-input" placeholder="Fanpage Bán Hàng" required>
+
+        <form id="formAccount" onsubmit="return false;">
+          <div class="form-group">
+            <label for="accName">Tên Tài Khoản / Trang</label>
+            <input type="text" id="accName" class="form-control" placeholder="Fanpage Bán Hàng" required>
           </div>
-          <div class="form-section">
-            <label class="section-label">Loại</label>
-            <select id="accType" class="form-input">
+
+          <div class="form-group">
+            <label for="accType">Loại đối tượng</label>
+            <select id="accType" class="form-control">
               <option value="page">Fanpage</option>
-              <option value="group">Group</option>
-              <option value="user">Profile</option>
+              <option value="group">Nhóm (Group)</option>
+              <option value="user">Trang Cá Nhân (Profile)</option>
             </select>
           </div>
-          <div class="form-section">
-            <label class="section-label">Facebook ID</label>
-            <input type="text" id="accTargetId" class="form-input" placeholder="ID Trang hoặc Nhóm">
+
+          <div class="form-group">
+            <label for="accTargetId">Facebook Target ID</label>
+            <input type="text" id="accTargetId" class="form-control" placeholder="ID Trang hoặc ID Nhóm">
           </div>
-          <div class="form-section">
-            <label class="section-label">Access Token</label>
-            <textarea id="accToken" class="form-input" style="min-height:70px;" placeholder="Nhập Token..." required></textarea>
+
+          <div class="form-group">
+            <label for="accToken">Access Token</label>
+            <textarea id="accToken" class="form-control" style="min-height: 100px;" placeholder="Nhập Access Token..." required></textarea>
           </div>
-          <button type="submit" class="submit-btn" style="background:linear-gradient(135deg,var(--accent-green),#059669);">➕ Thêm Tài Khoản</button>
+
+          <button type="submit" class="btn btn-primary" style="width: 100%; margin-top:8px;">
+            <span>➕</span> Lưu Tài Khoản
+          </button>
         </form>
       </div>
-      <div class="glass-card">
-        <div class="card-header">
-          <span style="font-size:15px;font-weight:700;">Danh Sách Tài Khoản</span>
-          <span class="api-badge" id="accountsCount">0</span>
+
+      <div class="card">
+        <div class="card-title">
+          <span>Danh Sách Đã Lưu</span>
+          <span class="badge" id="accountsCount">0 tài khoản</span>
         </div>
-        <div class="list-scroll" id="accountsList">
-          <div class="empty-state">Chưa có tài khoản nào.</div>
+
+        <div class="item-list" id="accountsList">
+          <div style="text-align: center; padding: 40px; color: var(--text-dim);">Đang tải...</div>
         </div>
       </div>
     </div>
 
-    <!-- Tab 4: Logs -->
-    <div class="tab-panel layout-full" id="tabLogs">
-      <div class="glass-card">
-        <div class="card-header">
-          <span style="font-size:15px;font-weight:700;">📊 Nhật Ký Hệ Thống</span>
-          <button class="action-btn primary" id="btnRefreshLogs">🔄 Làm Mới</button>
+    <!-- Tab 4: System Logs -->
+    <div class="tab-content logs-grid" id="tabLogs">
+      <div class="card">
+        <div class="card-title">
+          <span>📊 Nhật Ký Hoạt Động (Logs)</span>
+          <button class="btn btn-xs btn-primary" id="btnRefreshLogs">🔄 Làm Mới</button>
         </div>
-        <div class="list-scroll" id="logsList">
-          <div class="skeleton"></div>
+
+        <div class="item-list" id="logsList" style="background:rgba(0,0,0,0.3); padding:16px; border-radius:16px; border:1px solid var(--border-color); font-family:monospace;">
+          <div style="text-align: center; padding: 40px; color: var(--text-dim);">Đang tải logs...</div>
         </div>
       </div>
     </div>
-
   </div>
 
-  <div class="toast-container"><div class="toast" id="toast"></div></div>
+  <div class="toast" id="toast">
+    <span id="toastIcon">ℹ️</span>
+    <span id="toastMsg">Notification</span>
+  </div>
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
@@ -694,28 +992,41 @@
       document.getElementById('formAccount').addEventListener('submit', handleAddAccount);
       document.getElementById('btnRefreshLogs').addEventListener('click', loadLogs);
 
+      // Auto-refresh post list and system logs every 2s
       setInterval(() => {
         loadPosts();
         loadLogs();
-        document.getElementById('lastSyncTime').textContent = 'Đồng bộ: ' + new Date().toLocaleTimeString('vi-VN');
+        updateLastSync();
       }, 2000);
     });
+    
+    function updateCharCount(el) {
+      document.getElementById('contentCharCount').textContent = `${el.value.length} ký tự`;
+    }
+    
+    function updateLastSync() {
+      const now = new Date();
+      document.getElementById('lastSyncTime').textContent = `Last sync: ${now.toLocaleTimeString()}`;
+    }
 
     function initTabs() {
-      const tabBtns = document.querySelectorAll('.nav-item');
-      const tabPanels = document.querySelectorAll('.tab-panel');
+      const tabBtns = document.querySelectorAll('.nav-tab-btn');
+      const tabContents = document.querySelectorAll('.tab-content');
+
       tabBtns.forEach(btn => {
         btn.addEventListener('click', () => {
           tabBtns.forEach(b => b.classList.remove('active'));
-          tabPanels.forEach(c => c.classList.remove('active'));
+          tabContents.forEach(c => c.classList.remove('active'));
+
+          const targetTabId = btn.getAttribute('data-tab');
           btn.classList.add('active');
-          document.getElementById(btn.getAttribute('data-tab')).classList.add('active');
+          document.getElementById(targetTabId).classList.add('active');
         });
       });
     }
 
     function selectPostTypePill(type, btn) {
-      document.querySelectorAll('.pill-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.type-pill-btn').forEach(b => b.classList.remove('active'));
       if (btn) btn.classList.add('active');
       const select = document.getElementById('postType');
       if (select) select.value = type;
@@ -725,27 +1036,16 @@
       const input = document.getElementById('postScheduledTime');
       const now = new Date();
       now.setMinutes(now.getMinutes() + minutesAdd);
-      input.value = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+      const localIso = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+      input.value = localIso;
     }
 
-    function setDefaultDateTime() { setPresetSchedule(5); }
-
-    function updateCharCount(el) {
-      const cc = document.getElementById('charCount');
-      if (cc) cc.textContent = el.value.length + ' ký tự';
+    function setDefaultDateTime() {
+      setPresetSchedule(5);
     }
 
-    function timeAgo(ts) {
-      if (!ts) return '';
-      const diff = Math.floor((Date.now() - new Date(ts).getTime()) / 1000);
-      if (diff < 60) return 'vừa xong';
-      if (diff < 3600) return Math.floor(diff/60) + ' phút trước';
-      if (diff < 86400) return Math.floor(diff/3600) + ' giờ trước';
-      return Math.floor(diff/86400) + ' ngày trước';
-    }
-
-    const API_BASE = (window.location.protocol && window.location.protocol.startsWith('http'))
-      ? (window.location.origin || (window.location.protocol + '//' + window.location.host))
+    const API_BASE = (window.location.protocol && window.location.protocol.startsWith('http')) 
+      ? (window.location.origin || (window.location.protocol + '//' + window.location.host)) 
       : 'http://127.0.0.1:18923';
     let _allPostsCache = [];
     let _lastPostsHash = "";
@@ -753,7 +1053,23 @@
 
     function debouncedSearch() {
       if (_searchTimeout) clearTimeout(_searchTimeout);
-      _searchTimeout = setTimeout(() => { renderPosts(_allPostsCache); }, 300);
+      _searchTimeout = setTimeout(() => {
+        renderPosts(_allPostsCache);
+      }, 300);
+    }
+    
+    function animateValue(obj, start, end, duration) {
+      if (!obj) return;
+      let startTimestamp = null;
+      const step = (timestamp) => {
+        if (!startTimestamp) startTimestamp = timestamp;
+        const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+        obj.innerHTML = Math.floor(progress * (end - start) + start);
+        if (progress < 1) {
+          window.requestAnimationFrame(step);
+        }
+      };
+      window.requestAnimationFrame(step);
     }
 
     async function loadPosts() {
@@ -761,131 +1077,216 @@
         const res = await fetch(`${API_BASE}/api/posts`);
         if (!res.ok) return;
         const data = await res.json();
+        
         const newHash = JSON.stringify(data);
         if (newHash === _lastPostsHash) return;
         _lastPostsHash = newHash;
+
         _allPostsCache = Array.isArray(data) ? data : (data.posts || []);
+        
+        // Update KPI Statistics
         const total = _allPostsCache.length;
         const pending = _allPostsCache.filter(p => p.status === 'pending' || p.status === 'in_progress').length;
         const completed = _allPostsCache.filter(p => p.status === 'completed').length;
         const seedingTotal = _allPostsCache.reduce((acc, p) => acc + (p.seedingComments ? p.seedingComments.length : 0), 0);
-        animateValue('statTotalPosts', total);
-        animateValue('statPendingPosts', pending);
-        animateValue('statCompletedPosts', completed);
-        animateValue('statSeedingCount', seedingTotal);
-        renderPosts(_allPostsCache);
-      } catch (e) { console.warn("loadPosts:", e.message); }
-    }
 
-    function animateValue(id, target) {
-      const el = document.getElementById(id);
-      if (!el) return;
-      const current = parseInt(el.textContent) || 0;
-      if (current === target) return;
-      const diff = target - current;
-      const steps = Math.min(Math.abs(diff), 15);
-      const increment = diff / steps;
-      let step = 0;
-      const timer = setInterval(() => {
-        step++;
-        el.textContent = Math.round(current + increment * step);
-        if (step >= steps) { el.textContent = target; clearInterval(timer); }
-      }, 30);
+        const elTotal = document.getElementById('statTotalPosts');
+        const elPending = document.getElementById('statPendingPosts');
+        const elCompleted = document.getElementById('statCompletedPosts');
+        const elSeeding = document.getElementById('statSeedingCount');
+        
+        if (elTotal && elTotal.textContent != total) animateValue(elTotal, parseInt(elTotal.textContent)||0, total, 500);
+        if (elPending && elPending.textContent != pending) animateValue(elPending, parseInt(elPending.textContent)||0, pending, 500);
+        if (elCompleted && elCompleted.textContent != completed) animateValue(elCompleted, parseInt(elCompleted.textContent)||0, completed, 500);
+        if (elSeeding && elSeeding.textContent != seedingTotal) animateValue(elSeeding, parseInt(elSeeding.textContent)||0, seedingTotal, 500);
+
+        renderPosts(_allPostsCache);
+      } catch (e) {
+        console.warn("loadPosts status:", e.message);
+      }
     }
 
     function getTypeBadge(type) {
-      const t = { post: '📝 Bài viết', video: '🎥 Video', reel: '🎬 Reels', story: '📲 Story' };
-      return t[type] || '📝 Bài viết';
+      const types = {
+        post: '📝 Bài viết',
+        video: '🎥 Video',
+        reel: '🎬 Thước phim',
+        story: '📲 Bản tin'
+      };
+      return types[type] || '📝 Bài viết';
+    }
+    
+    function timeAgo(dateParam) {
+      if (!dateParam) return "";
+      const date = typeof dateParam === 'object' ? dateParam : new Date(dateParam);
+      const today = new Date();
+      const seconds = Math.round((today - date) / 1000);
+      const minutes = Math.round(seconds / 60);
+      const isFuture = seconds < 0;
+      
+      if (isFuture) {
+        if (Math.abs(minutes) < 60) return `Sau ${Math.abs(minutes)} phút`;
+        return `Sau ${Math.round(Math.abs(minutes)/60)} giờ`;
+      }
+      
+      if (seconds < 60) return `${seconds} giây trước`;
+      if (minutes < 60) return `${minutes} phút trước`;
+      const hours = Math.round(minutes / 60);
+      if (hours < 24) return `${hours} giờ trước`;
+      const days = Math.round(hours / 24);
+      return `${days} ngày trước`;
     }
 
     function renderPostCard(p) {
       if (!p) return '';
       try {
         const safeId = (p.id && typeof p.id === 'string') ? p.id : String(p.id || '');
-        const displayId = safeId.length > 16 ? safeId.substring(0, 16) + '…' : safeId;
+        const displayId = safeId.length > 16 ? safeId.substring(0, 16) : safeId;
+        let actionBtn = '';
+        let statusBadgeHtml = '';
+        let borderColor = 'var(--border-color)';
 
-        let statusHtml = '', actionBtn = '', cardClass = '';
         if (p.status === 'completed') {
-          statusHtml = '<span class="status-chip status-completed">✅ Hoàn thành</span>';
-          actionBtn = `<button class="action-btn primary" onclick="runPostNow('${safeId}')">🔄 Lại</button>`;
-          cardClass = 'done';
+          statusBadgeHtml = `<span class="status-badge status-completed">✅ Hoàn thành</span>`;
+          actionBtn = `<button class="btn btn-xs btn-primary" onclick="runPostNow('${safeId}')">🔄 Đăng Lại</button>`;
+          borderColor = 'rgba(16,185,129,0.3)';
         } else if (p.status === 'failed') {
-          statusHtml = '<span class="status-chip status-failed">❌ Lỗi</span>';
-          actionBtn = `<button class="action-btn primary" onclick="runPostNow('${safeId}')">🔄 Thử</button>`;
+          statusBadgeHtml = `<span class="status-badge status-failed">❌ Thất bại</span>`;
+          actionBtn = `<button class="btn btn-xs btn-primary" onclick="runPostNow('${safeId}')">🔄 Thử Lại</button>`;
+          borderColor = 'rgba(239,68,68,0.3)';
         } else if (p.status === 'in_progress') {
-          statusHtml = '<span class="status-chip status-in_progress"><span class="spinner"></span> Đang chạy</span>';
-          actionBtn = '<button class="action-btn ghost" disabled>⏳</button>';
-          cardClass = 'running';
+          statusBadgeHtml = `<span class="status-badge status-in_progress"><div class="pulse-spinner"></div>⚡ Đang chạy</span>`;
+          actionBtn = `<button class="btn btn-xs btn-primary" disabled style="opacity:0.7;">⏳ Đang Đăng...</button>`;
+          borderColor = 'rgba(59,130,246,0.5)';
         } else {
-          statusHtml = '<span class="status-chip status-pending">⏳ Chờ</span>';
-          actionBtn = `<button class="action-btn primary" onclick="runPostNow('${safeId}')">⚡ Đăng</button>`;
+          statusBadgeHtml = `<span class="status-badge status-pending">⏳ Đang chờ</span>`;
+          actionBtn = `<button class="btn btn-xs btn-primary" onclick="runPostNow('${safeId}')">⚡ Đăng Ngay</button>`;
         }
 
-        const progressClass = p.status === 'completed' ? 'green' : (p.status === 'failed' ? 'red' : 'blue');
-        const targetLabel = p.targetType === 'page' ? '🚩 Page' : (p.targetType === 'group' ? '👥 Group' : '👤 Profile');
-        const scheduleStr = p.scheduledTime ? timeAgo(p.scheduledTime) || new Date(p.scheduledTime).toLocaleString('vi-VN') : '';
-
-        let fbLinkHtml = '';
-        if (p.fbPostUrl || p.fbPostId) {
-          const url = p.fbPostUrl || ((p.fbPostId && p.fbPostId.startsWith('pfbid')) ? ('https://www.facebook.com/posts/' + p.fbPostId) : ((p.fbPostId && p.fbPostId.length > 5) ? ('https://www.facebook.com/photo/?fbid=' + p.fbPostId) : 'https://www.facebook.com/me'));
-          fbLinkHtml = `<a href="${escapeHtml(url)}" target="_blank" rel="noopener" class="fb-link">🔗 Mở trên Facebook</a>`;
-        } else if (p.status === 'completed') {
-          const fallback = p.targetUrl || (p.targetId ? ('https://www.facebook.com/' + p.targetId) : 'https://www.facebook.com/me');
-          fbLinkHtml = `<a href="${escapeHtml(fallback)}" target="_blank" rel="noopener" class="fb-link">🔗 Mở Facebook</a>`;
-        }
+        const scheduledTimeStr = p.scheduledTime ? new Date(p.scheduledTime).toLocaleString('vi-VN') : 'Mới tạo';
+        const relativeTime = p.scheduledTime ? timeAgo(p.scheduledTime) : '';
 
         return `
-        <div class="post-card ${cardClass}">
-          <div class="post-top">
-            <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
-              <span class="tag tag-type">${getTypeBadge(p.postType)}</span>
-              <span class="tag tag-target">${targetLabel}</span>
-              ${scheduleStr ? `<span class="post-meta">⏰ ${scheduleStr}</span>` : ''}
+        <div class="list-card" style="border-color: ${borderColor}; ${p.status === 'in_progress' ? 'box-shadow: 0 0 20px rgba(59,130,246,0.2);' : ''}">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+              <span class="badge" style="background:rgba(99,102,241,0.2); color:#818cf8;">${getTypeBadge(p.postType)}</span>
+              <span class="badge" style="background:rgba(236,72,153,0.2); color:#f472b6;">${p.targetType === 'page' ? '🚩 Fanpage' : (p.targetType === 'group' ? '👨‍👩‍👧‍👦 Group' : '👤 Profile')}</span>
+              <span style="font-size:12px; color:var(--text-muted); display:flex; align-items:center; gap:4px;">
+                ⏰ ${scheduledTimeStr} 
+                ${relativeTime ? `<span style="opacity:0.7; font-size:11px;">(${relativeTime})</span>` : ''}
+              </span>
             </div>
-            ${statusHtml}
+            ${statusBadgeHtml}
           </div>
-          ${p.content ? `<div class="post-content">${escapeHtml(p.content)}</div>` : ''}
-          ${p.mediaData ? `<div class="post-meta">📎 ${escapeHtml(p.mediaData.fileName)} (${(p.mediaData.size/(1024*1024)).toFixed(1)}MB)</div>` : ''}
-          ${p.mediaUrl && !p.mediaData ? `<div class="post-meta">🖼️ ${escapeHtml(p.mediaUrl)}</div>` : ''}
-          ${p.seedingComments && p.seedingComments.length ? `<div class="post-meta" style="color:#34d399;">💬 ${p.seedingComments.length} comment seeding</div>` : ''}
-          ${p.progressStep ? `<div class="progress-strip ${progressClass}">${p.status === 'in_progress' ? '<span class="spinner"></span>' : ''} ${escapeHtml(p.progressStep)}</div>` : ''}
-          ${fbLinkHtml}
-          ${p.lastError && p.status !== 'completed' ? `<div class="progress-strip red">⚠️ ${escapeHtml(p.lastError)}</div>` : ''}
-          <div class="post-footer">
-            <span class="post-id">ID: ${displayId} ${p.fbPostId ? `• FB: <b style="color:#34d399;">${escapeHtml(p.fbPostId)}</b>` : ''} ${p.executionMethod ? `• ${p.executionMethod}` : ''}</span>
-            <div class="post-actions">
+          
+          <div style="font-size:15px; color:#fff; margin-top:10px; font-weight:500; line-height:1.5;">${escapeHtml(p.content)}</div>
+          
+          <div style="display:flex; flex-direction:column; gap:4px; margin-top:8px;">
+            ${p.mediaData ? `<div style="font-size:12px; color:#a78bfa; background:rgba(139,92,246,0.1); padding:6px 10px; border-radius:8px; width:fit-content;">📎 File: ${escapeHtml(p.mediaData.fileName)} (${(p.mediaData.size / (1024*1024)).toFixed(1)} MB)</div>` : ''}
+            ${p.mediaUrl && !p.mediaData ? `<div style="font-size:12px; color:#60a5fa; background:rgba(59,130,246,0.1); padding:6px 10px; border-radius:8px; word-break:break-all;">🖼️ URL: ${escapeHtml(p.mediaUrl)}</div>` : ''}
+            ${p.seedingComments && p.seedingComments.length ? `<div style="font-size:12px; color:#34d399; background:rgba(16,185,129,0.1); padding:6px 10px; border-radius:8px; width:fit-content;">💬 ${p.seedingComments.length} bình luận seeding</div>` : ''}
+          </div>
+
+          ${p.status === 'in_progress' ? \`
+            <div class="progress-bar-container">
+              <div class="progress-bar" style="width: ${p.progressStep ? '60%' : '30%'}"></div>
+            </div>
+          \` : ''}
+
+          ${p.progressStep ? \`
+            <div style="margin-top:10px; padding:12px 16px; border-radius:12px; font-size:13px; font-weight:600; background:rgba(59,130,246,0.1); border:1px solid rgba(59,130,246,0.3); color:#60a5fa; display:flex; align-items:center; gap:10px;">
+              ${p.status === 'in_progress' ? '<div class="pulse-spinner"></div>' : '✓'}
+              <span>${escapeHtml(p.progressStep)}</span>
+            </div>
+          \` : ''}
+
+          <!-- Direct Facebook Post Link -->
+          ${(p.fbPostUrl || p.fbPostId) ? \`
+            <div style="margin-top:10px;">
+              <a href="${escapeHtml(p.fbPostUrl || ((p.fbPostId && p.fbPostId.startsWith('pfbid')) ? ('https://www.facebook.com/posts/' + p.fbPostId) : ((p.fbPostId && p.fbPostId.length > 5) ? ('https://www.facebook.com/photo/?fbid=' + p.fbPostId) : 'https://www.facebook.com/me')))}" target="_blank" rel="noopener" class="btn btn-xs" style="background:linear-gradient(135deg,#10b981,#059669); color:#fff; width:fit-content;">
+                🔗 Xem Bài Viết Trực Tiếp (ID: ${escapeHtml(p.fbPostId)})
+              </a>
+            </div>
+          \` : (p.status === 'completed' ? \`
+            <div style="margin-top:10px;">
+              <a href="${escapeHtml(p.targetUrl || (p.targetId ? ('https://www.facebook.com/' + p.targetId) : 'https://www.facebook.com/me'))}" target="_blank" rel="noopener" class="btn btn-xs" style="background:linear-gradient(135deg,#10b981,#059669); color:#fff; width:fit-content;">
+                🔗 Mở Trang Facebook Đã Đăng
+              </a>
+            </div>
+          \` : '')}
+
+          ${p.lastError && p.status !== 'completed' ? \`<div style="font-size:12px; color:#f87171; margin-top:10px; background:rgba(239,68,68,0.1); padding:10px 14px; border-radius:12px; border:1px solid rgba(239,68,68,0.3);">⚠️ Lỗi: ${escapeHtml(p.lastError)}</div>\` : ''}
+
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:16px; padding-top:12px; border-top:1px solid var(--border-color);">
+            <span style="font-size:11px; color:var(--text-dim);">
+              ID: ${displayId} ${p.fbPostId ? \`• FB: <strong style="color:#34d399;">${escapeHtml(p.fbPostId)}</strong>\` : ''}
+            </span>
+            <div style="display:flex; gap:8px;">
               ${actionBtn}
-              <button class="action-btn ghost" onclick="duplicatePost('${safeId}')">📋</button>
-              <button class="action-btn danger" onclick="deletePost('${safeId}')">🗑️</button>
+              <button class="btn-icon" onclick="duplicatePost('${safeId}')" title="Nhân Bản">📋</button>
+              <button class="btn-icon" style="color:#f87171; border-color:rgba(239,68,68,0.3);" onclick="deletePost('${safeId}')" title="Xóa">🗑️</button>
             </div>
           </div>
-        </div>`;
-      } catch (e) { console.error("renderPostCard:", e); return ''; }
+        </div>
+      \`;
+      } catch (e) {
+        console.error("renderPostCard error:", e);
+        return '';
+      }
     }
 
     function renderPosts(posts) {
       const pendingList = posts.filter(p => p.status !== 'completed');
       const completedList = posts.filter(p => p.status === 'completed');
+
+      // Badges
       document.getElementById('postsCount').textContent = `${pendingList.length} bài`;
       document.getElementById('completedCount').textContent = `${completedList.length} bài đã đăng`;
       document.getElementById('navPendingBadge').textContent = pendingList.length;
       document.getElementById('navCompletedBadge').textContent = completedList.length;
 
-      const pc = document.getElementById('postsList');
-      pc.innerHTML = pendingList.length === 0
-        ? '<div class="empty-state">Không có bài nào đang chờ.</div>'
-        : pendingList.map(renderPostCard).join('');
+      // Render Tab 1
+      const pendingContainer = document.getElementById('postsList');
+      if (pendingList.length === 0) {
+        pendingContainer.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-dim); background:rgba(0,0,0,0.2); border-radius:16px;">✨ Không có bài đăng nào đang chờ.</div>';
+      } else {
+        pendingContainer.innerHTML = pendingList.map(renderPostCard).join('');
+      }
 
+      // Render Tab 2
       const searchQuery = (document.getElementById('searchCompleted')?.value || '').toLowerCase().trim();
       const filterStatus = document.getElementById('filterStatus')?.value || 'completed';
-      let target = filterStatus === 'all' ? posts : (filterStatus === 'failed' ? posts.filter(p => p.status === 'failed') : (filterStatus === 'pending' ? pendingList : completedList));
-      if (searchQuery) target = target.filter(p => (p.content||'').toLowerCase().includes(searchQuery) || (p.fbPostId||'').toLowerCase().includes(searchQuery) || (p.id||'').toLowerCase().includes(searchQuery));
-      const cc = document.getElementById('completedList');
-      cc.innerHTML = target.length === 0 ? '<div class="empty-state">Không có bài viết phù hợp.</div>' : target.map(renderPostCard).join('');
+
+      let targetCompletedList = completedList;
+      if (filterStatus === 'all') targetCompletedList = posts;
+      else if (filterStatus === 'failed') targetCompletedList = posts.filter(p => p.status === 'failed');
+      else if (filterStatus === 'pending') targetCompletedList = pendingList;
+
+      if (searchQuery) {
+        targetCompletedList = targetCompletedList.filter(p =>
+          (p.content || '').toLowerCase().includes(searchQuery) ||
+          (p.fbPostId || '').toLowerCase().includes(searchQuery) ||
+          (p.id || '').toLowerCase().includes(searchQuery)
+        );
+      }
+
+      const completedContainer = document.getElementById('completedList');
+      if (targetCompletedList.length === 0) {
+        completedContainer.innerHTML = `<div style="text-align: center; padding: 40px; color: var(--text-dim); background:rgba(0,0,0,0.2); border-radius:16px;">${searchQuery ? 'Không tìm thấy kết quả.' : 'Chưa có bài viết nào.'}</div>`;
+      } else {
+        completedContainer.innerHTML = targetCompletedList.map(renderPostCard).join('');
+      }
     }
 
     async function handleAddPost(e) {
       if (e) e.preventDefault();
+      
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      const originalText = submitBtn.innerHTML;
+      submitBtn.innerHTML = '<div class="pulse-spinner" style="display:inline-block; margin-right:8px;"></div> ĐANG XỬ LÝ...';
+      submitBtn.disabled = true;
+
       const postType = document.getElementById('postType').value || 'post';
       const content = document.getElementById('postContent').value.trim();
       const mediaUrl = document.getElementById('postMediaUrl').value.trim();
@@ -895,35 +1296,67 @@
       const scheduledTimeRaw = document.getElementById('postScheduledTime').value;
       const scheduledTime = scheduledTimeRaw ? new Date(scheduledTimeRaw).getTime() : Date.now();
       const repeatIntervalMinutes = document.getElementById('postRepeat')?.value || 0;
+
       const seedingRaw = document.getElementById('postSeedingComments').value || '';
       const seedingComments = seedingRaw.split('\n').map(s => s.trim()).filter(Boolean);
-      if (!content && !mediaUrl && !_adminMediaData) { showToast('⚠️ Vui lòng nhập nội dung, chọn file, hoặc nhập URL!'); return; }
-      const postData = { postType, content, mediaUrl, targetType, targetId, seedingComments, accessToken, scheduledTime, repeatIntervalMinutes };
-      if (_adminMediaData) postData.mediaData = _adminMediaData;
+
+      if (!content && !mediaUrl && !_adminMediaData) {
+        showToast('⚠️ Vui lòng nhập nội dung, chọn file, hoặc URL Media!', 'error');
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+        return;
+      }
+
+      const postData = {
+        postType, content, mediaUrl, targetType, targetId, seedingComments, accessToken, scheduledTime, repeatIntervalMinutes
+      };
+
+      if (_adminMediaData) {
+        postData.mediaData = _adminMediaData;
+      }
+
       try {
-        const res = await fetch(`${API_BASE}/api/posts`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(postData) });
+        const res = await fetch(`${API_BASE}/api/posts`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(postData)
+        });
+
         const data = await res.json();
+
         if (res.ok && data.success) {
-          showToast('🚀 Đã phát lệnh đăng bài thành công!');
+          showToast('🚀 Đã lên lịch đăng bài thành công!', 'success');
           document.getElementById('postContent').value = '';
+          updateCharCount(document.getElementById('postContent'));
           document.getElementById('postMediaUrl').value = '';
           clearAdminMedia();
           setDefaultDateTime();
-          updateCharCount(document.getElementById('postContent'));
-          if (data.post && data.post.id && (scheduledTime <= Date.now() + 60000)) { await runPostNow(data.post.id); } else { loadPosts(); }
-        } else { showToast(`❌ Lỗi: ${data.error || 'Không thể lưu'}`); }
-      } catch (err) { showToast(`❌ Lỗi kết nối: ${err.message}`); }
+          if (data.post && data.post.id && (scheduledTime <= Date.now() + 60000)) {
+            await runPostNow(data.post.id);
+          } else {
+            loadPosts();
+          }
+        } else {
+          showToast(`❌ Lỗi: ${data.error || 'Không thể lưu'}`, 'error');
+        }
+      } catch (err) {
+        showToast(`❌ Lỗi kết nối: ${err.message}`, 'error');
+      } finally {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+      }
     }
 
     async function runPostNow(id) {
+      showToast('⚡ Đang phát lệnh đăng ngay...', 'info');
       await fetch(`${API_BASE}/api/posts/${id}/run-now`, { method: 'POST' });
-      showToast('⚡ Đã phát lệnh đăng ngay!');
       setTimeout(loadPosts, 1000);
     }
 
     async function deletePost(id) {
+      if(!confirm('Bạn có chắc chắn muốn xóa bài này?')) return;
       await fetch(`${API_BASE}/api/posts/${id}`, { method: 'DELETE' });
-      showToast('🗑️ Đã xóa!');
+      showToast('🗑️ Đã xóa bài đăng!', 'success');
       loadPosts();
     }
 
@@ -933,23 +1366,24 @@
         const data = await res.json();
         const post = (data.posts || []).find(p => p.id === id);
         if (post) {
-          document.getElementById('postType').value = post.postType || 'post';
+          selectPostTypePill(post.postType || 'post', document.querySelector(`.type-pill-btn[data-type="${post.postType || 'post'}"]`));
           document.getElementById('postContent').value = post.content || '';
+          updateCharCount(document.getElementById('postContent'));
           document.getElementById('postMediaUrl').value = post.mediaUrl || '';
           document.getElementById('postTargetId').value = post.targetId || '';
           document.getElementById('postAccessToken').value = post.accessToken || '';
-          // Update pill active state
-          document.querySelectorAll('.pill-btn').forEach(b => { b.classList.toggle('active', b.getAttribute('data-type') === (post.postType || 'post')); });
           if (post.mediaData) {
             _adminMediaData = post.mediaData;
             const fileInfo = document.getElementById('mediaFileInfo');
             const fileName = document.getElementById('mediaFileName');
-            if (fileInfo && fileName) { fileName.textContent = `📎 ${post.mediaData.fileName} (nhân bản)`; fileInfo.style.display = 'flex'; }
+            if (fileInfo && fileName) {
+              fileName.textContent = `📎 ${post.mediaData.fileName} (Nhân bản)`;
+              fileInfo.style.display = 'flex';
+            }
             const dropText = document.getElementById('mediaDropText');
             if (dropText) dropText.style.display = 'none';
           }
-          updateCharCount(document.getElementById('postContent'));
-          showToast('📋 Đã nạp dữ liệu!');
+          showToast('📋 Đã nạp dữ liệu vào form!', 'success');
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }
       } catch (e) {}
@@ -964,18 +1398,23 @@
     }
 
     function renderAccounts(accounts) {
-      const c = document.getElementById('accountsList');
+      const container = document.getElementById('accountsList');
       document.getElementById('accountsCount').textContent = `${accounts.length} tài khoản`;
-      if (accounts.length === 0) { c.innerHTML = '<div class="empty-state">Chưa có tài khoản nào.</div>'; return; }
-      c.innerHTML = accounts.map(a => `
-        <div class="post-card">
-          <div class="post-top">
-            <strong style="color:#fff;">${escapeHtml(a.name)}</strong>
-            <span class="tag tag-type">${escapeHtml(a.type)}</span>
+
+      if (accounts.length === 0) {
+        container.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-dim); background:rgba(0,0,0,0.2); border-radius:16px;">Chưa có tài khoản nào.</div>';
+        return;
+      }
+
+      container.innerHTML = accounts.map(a => `
+        <div class="list-card">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <strong style="color:#fff; font-size:15px;">${escapeHtml(a.name)}</strong>
+            <span class="badge">${a.type}</span>
           </div>
-          <div class="post-meta">Target ID: ${escapeHtml(a.targetId || 'N/A')}</div>
-          <div style="display:flex;justify-content:flex-end;">
-            <button class="action-btn danger" onclick="deleteAccount('${a.id}')">🗑️ Xóa</button>
+          <div style="font-size:12px; color:var(--text-muted); word-break:break-all;">Target ID: ${escapeHtml(a.targetId || 'N/A')}</div>
+          <div style="display:flex; justify-content:flex-end; margin-top:8px;">
+            <button class="btn btn-xs btn-danger" onclick="deleteAccount('${a.id}')">Xóa</button>
           </div>
         </div>
       `).join('');
@@ -987,9 +1426,15 @@
       const type = document.getElementById('accType').value;
       const targetId = document.getElementById('accTargetId').value.trim();
       const accessToken = document.getElementById('accToken').value.trim();
-      const res = await fetch(`${API_BASE}/api/accounts`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, type, targetId, accessToken }) });
+
+      const res = await fetch(`${API_BASE}/api/accounts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, type, targetId, accessToken })
+      });
+
       if (res.ok) {
-        showToast('✅ Đã thêm tài khoản!');
+        showToast('✅ Đã thêm tài khoản thành công!', 'success');
         document.getElementById('accName').value = '';
         document.getElementById('accTargetId').value = '';
         document.getElementById('accToken').value = '';
@@ -998,93 +1443,153 @@
     }
 
     async function deleteAccount(id) {
+      if(!confirm('Xóa tài khoản này?')) return;
       await fetch(`${API_BASE}/api/accounts/${id}`, { method: 'DELETE' });
-      showToast('🗑️ Đã xóa tài khoản!');
+      showToast('🗑️ Đã xóa tài khoản!', 'success');
       loadAccounts();
     }
 
     async function loadLogs() {
       try {
-        const res = await fetch(`${API_BASE}/api/logs`).catch(() => null);
-        if (res && res.ok) { renderLogs((await res.json()).logs || []); }
+        const logsRes = await fetch(`${API_BASE}/api/logs`).catch(() => null);
+        const container = document.getElementById('logsList');
+        
+        if (logsRes && logsRes.ok) {
+          const logsData = await logsRes.json();
+          renderLogs(logsData.logs || []);
+        }
       } catch (e) {}
     }
 
     function renderLogs(logs) {
-      const c = document.getElementById('logsList');
-      if (logs.length === 0) { c.innerHTML = '<div class="empty-state">Chưa có log nào.</div>'; return; }
-      const labels = {
-        CREATE_POST: { label: '📝 Tạo', color: '#60a5fa', bg: 'rgba(59,130,246,0.12)' },
-        UPDATE_POST: { label: '🔄 Cập nhật', color: '#fbbf24', bg: 'rgba(245,158,11,0.12)' },
-        TRIGGER_POST_NOW: { label: '⚡ Phát lệnh', color: '#a78bfa', bg: 'rgba(139,92,246,0.12)' },
-        DELETE_POST: { label: '🗑️ Xóa', color: '#f87171', bg: 'rgba(239,68,68,0.12)' }
+      const container = document.getElementById('logsList');
+      if (logs.length === 0) {
+        container.innerHTML = '<div style="text-align: center; padding: 30px; color: var(--text-dim);">Chưa có nhật ký hoạt động nào.</div>';
+        return;
+      }
+
+      const actionLabels = {
+        CREATE_POST: { label: 'TẠO BÀI', color: '#60a5fa' },
+        UPDATE_POST: { label: 'TIẾN ĐỘ', color: '#fbbf24' },
+        TRIGGER_POST_NOW: { label: 'ĐĂNG NGAY', color: '#a78bfa' },
+        DELETE_POST: { label: 'XÓA BÀI', color: '#f87171' }
       };
-      c.innerHTML = logs.map(l => {
-        const act = labels[l.action] || { label: l.action, color: '#94a3b8', bg: 'rgba(255,255,255,0.05)' };
-        const time = l.timestamp ? new Date(l.timestamp).toLocaleTimeString('vi-VN') + ' ' + new Date(l.timestamp).toLocaleDateString('vi-VN') : '';
-        let detail = '';
+
+      container.innerHTML = logs.map(l => {
+        const act = actionLabels[l.action] || { label: l.action, color: '#94a3b8' };
+        let timeStr = l.timestamp ? new Date(l.timestamp).toLocaleTimeString('vi-VN') : '';
+        
+        let detailsHtml = '';
         if (l.details && l.details.updates) {
           const u = l.details.updates;
-          if (u.progressStep) detail += `<span style="color:#e2e8f0;font-weight:600;">${escapeHtml(u.progressStep)}</span> `;
-          if (u.status) detail += `<span style="color:${u.status==='completed'?'#4ade80':(u.status==='failed'?'#f87171':'#fbbf24')};font-weight:700;">[${(typeof u.status === 'string' ? u.status.toUpperCase() : '')}]</span> `;
-          if (u.lastError) detail += `<span style="color:#f87171;">⚠️ ${escapeHtml(u.lastError)}</span>`;
-        } else if (l.details) { detail = `<span style="color:#cbd5e1;">${escapeHtml(JSON.stringify(l.details))}</span>`; }
-        return `<div class="log-entry"><div class="log-top"><span class="log-action" style="background:${act.bg};color:${act.color};">${act.label}</span><span class="log-time">⏰ ${time}</span></div><div style="margin-top:2px;">${detail}</div></div>`;
-      }).join('');
+          if (u.progressStep) detailsHtml += `<span style="color:#e2e8f0;">${escapeHtml(u.progressStep)}</span> `;
+          if (u.status) detailsHtml += `<span style="color:${u.status==='completed'?'#4ade80':(u.status==='failed'?'#f87171':'#fbbf24')};">[${u.status.toUpperCase()}]</span> `;
+          if (u.lastError) detailsHtml += `<span style="color:#f87171;">⚠️ ${escapeHtml(u.lastError)}</span>`;
+        } else if (l.details) {
+          detailsHtml = `<span style="color:#cbd5e1;">${escapeHtml(JSON.stringify(l.details))}</span>`;
+        }
+
+        return `
+        <div style="margin-bottom:8px; border-bottom:1px dashed rgba(255,255,255,0.1); padding-bottom:8px; font-size:12px;">
+          <span style="color:var(--text-dim); margin-right:8px;">[${timeStr}]</span>
+          <span style="color:${act.color}; font-weight:700; margin-right:8px;">${act.label}</span>
+          <span>${detailsHtml}</span>
+        </div>
+      `}).join('');
     }
 
-    function showToast(msg) {
-      const t = document.getElementById('toast');
-      t.textContent = msg;
-      t.classList.add('show');
-      setTimeout(() => t.classList.remove('show'), 3500);
+    function showToast(msg, type = 'info') {
+      const toast = document.getElementById('toast');
+      const icon = document.getElementById('toastIcon');
+      const text = document.getElementById('toastMsg');
+      
+      text.textContent = msg;
+      
+      if (type === 'success') {
+        icon.textContent = '✅';
+        toast.style.borderColor = 'rgba(16,185,129,0.5)';
+      } else if (type === 'error') {
+        icon.textContent = '❌';
+        toast.style.borderColor = 'rgba(239,68,68,0.5)';
+      } else {
+        icon.textContent = 'ℹ️';
+        toast.style.borderColor = 'rgba(99,102,241,0.5)';
+      }
+      
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 3500);
     }
 
     function escapeHtml(str) {
       if (str === null || str === undefined) return '';
       if (typeof str !== 'string') str = String(str);
-      return str.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m]));
+      return str.replace(/[&<>"']/g, function(m) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m];
+      });
     }
 
     // ================================================================
     // MEDIA UPLOAD: File picker, Drag & Drop, Preview, Base64
     // ================================================================
-    let _adminMediaData = null;
+    let _adminMediaData = null; // { base64, fileName, mimeType, size }
 
     function handleAdminMediaFile(file) {
       if (!file) return;
+
+      // Validate type (check extension as fallback when file.type is empty)
       const isImageByType = file.type && file.type.startsWith('image/');
       const isVideoByType = file.type && file.type.startsWith('video/');
       const isImageByExt = file.name && file.name.match(/\.(jpg|jpeg|png|gif|webp|tiff|heif|bmp)$/i);
       const isVideoByExt = file.name && file.name.match(/\.(mp4|mov|avi|mkv|webm|flv|wmv|m4v)$/i);
       const isImage = isImageByType || isImageByExt;
       const isVideo = isVideoByType || isVideoByExt;
-      if (!isImage && !isVideo) { showToast('⚠️ Chỉ hỗ trợ ảnh hoặc video!'); return; }
+
+      if (!isImage && !isVideo) {
+        showToast('⚠️ Chỉ hỗ trợ file ảnh hoặc video!', 'error');
+        return;
+      }
+
+      // Validate size: 10MB for images, 100MB for videos
       const maxSize = isVideo ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
-      if (file.size > maxSize) { showToast(`⚠️ File quá lớn! Max ${isVideo ? '100MB' : '10MB'}.`); return; }
+      const maxLabel = isVideo ? '100MB' : '10MB';
+      if (file.size > maxSize) {
+        showToast(`⚠️ File quá lớn! Tối đa ${maxLabel}.`, 'error');
+        return;
+      }
+
+      // Show preview
       const preview = document.getElementById('mediaPreview');
       const dropText = document.getElementById('mediaDropText');
       preview.innerHTML = '';
+
       if (isImage) {
         const img = document.createElement('img');
-        img.style.cssText = 'max-width:100%;max-height:140px;border-radius:8px;object-fit:cover;';
+        img.style.cssText = 'width:100%; height:100%; object-fit:cover; display:block;';
         img.src = URL.createObjectURL(file);
         img.onload = () => URL.revokeObjectURL(img.src);
         preview.appendChild(img);
       } else {
         const video = document.createElement('video');
-        video.style.cssText = 'max-width:100%;max-height:140px;border-radius:8px;';
+        video.style.cssText = 'width:100%; height:100%; object-fit:cover; display:block;';
         video.src = URL.createObjectURL(file);
-        video.controls = true; video.muted = true;
+        video.controls = true;
+        video.muted = true;
         preview.appendChild(video);
       }
+
       preview.style.display = 'block';
       dropText.style.display = 'none';
+
+      // File info
       const fileInfo = document.getElementById('mediaFileInfo');
       const fileName = document.getElementById('mediaFileName');
-      const sizeStr = file.size < 1024*1024 ? (file.size/1024).toFixed(1)+' KB' : (file.size/(1024*1024)).toFixed(1)+' MB';
+      const sizeStr = file.size < 1024 * 1024
+        ? (file.size / 1024).toFixed(1) + ' KB'
+        : (file.size / (1024 * 1024)).toFixed(1) + ' MB';
       fileName.textContent = `📎 ${file.name} (${sizeStr})`;
       fileInfo.style.display = 'flex';
+
+      // Read base64
       const reader = new FileReader();
       reader.onload = (e) => {
         const base64Data = e.target.result.split(',')[1];
@@ -1093,8 +1598,13 @@
           if (file.name.match(/\.(mp4|mov|avi|mkv|webm)$/i)) resolvedMime = 'video/mp4';
           else if (file.name.match(/\.(jpg|jpeg|png|gif|webp)$/i)) resolvedMime = 'image/jpeg';
         }
-        _adminMediaData = { base64: base64Data, fileName: file.name, mimeType: resolvedMime || 'application/octet-stream', size: file.size };
-        showToast(`✅ File "${file.name}" sẵn sàng!`);
+        _adminMediaData = {
+          base64: base64Data,
+          fileName: file.name,
+          mimeType: resolvedMime || 'application/octet-stream',
+          size: file.size
+        };
+        showToast(`✅ File "${file.name}" đã sẵn sàng!`, 'success');
       };
       reader.readAsDataURL(file);
     }
@@ -1105,21 +1615,31 @@
       const dropText = document.getElementById('mediaDropText');
       const fileInfo = document.getElementById('mediaFileInfo');
       const fileInput = document.getElementById('mediaFileInput');
+
       if (preview) { preview.innerHTML = ''; preview.style.display = 'none'; }
       if (dropText) dropText.style.display = 'block';
       if (fileInfo) fileInfo.style.display = 'none';
       if (fileInput) fileInput.value = '';
     }
 
-    // Drag & Drop
+    // Drag & Drop setup
     (function() {
       const dz = document.getElementById('mediaDropZone');
       if (!dz) return;
-      dz.addEventListener('dragenter', (e) => { e.preventDefault(); dz.classList.add('drag-over'); });
-      dz.addEventListener('dragover', (e) => { e.preventDefault(); });
-      dz.addEventListener('dragleave', () => { dz.classList.remove('drag-over'); });
+
+      ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dz.addEventListener(eventName, preventDefaults, false);
+      });
+      function preventDefaults(e) { e.preventDefault(); e.stopPropagation(); }
+
+      ['dragenter', 'dragover'].forEach(eventName => {
+        dz.addEventListener(eventName, () => dz.classList.add('dragover'), false);
+      });
+      ['dragleave', 'drop'].forEach(eventName => {
+        dz.addEventListener(eventName, () => dz.classList.remove('dragover'), false);
+      });
+
       dz.addEventListener('drop', (e) => {
-        e.preventDefault(); dz.classList.remove('drag-over');
         const file = e.dataTransfer.files[0];
         if (file) handleAdminMediaFile(file);
       });
