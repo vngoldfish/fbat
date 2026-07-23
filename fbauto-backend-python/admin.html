@@ -1346,37 +1346,37 @@
             ${p.seedingComments && p.seedingComments.length ? `<div style="font-size:12px; color:#34d399; background:rgba(16,185,129,0.1); padding:6px 10px; border-radius:8px; width:fit-content;">💬 ${p.seedingComments.length} bình luận seeding</div>` : ''}
           </div>
 
-          ${p.status === 'in_progress' ? \`
+          ${p.status === 'in_progress' ? `
             <div class="progress-bar-container">
               <div class="progress-bar" style="width: ${p.progressStep ? '60%' : '30%'}"></div>
             </div>
-          \` : ''}
+          ` : ''}
 
-          ${p.progressStep ? \`
+          ${p.progressStep ? `
             <div style="margin-top:10px; padding:12px 16px; border-radius:12px; font-size:13px; font-weight:600; background:rgba(59,130,246,0.1); border:1px solid rgba(59,130,246,0.3); color:#60a5fa; display:flex; align-items:center; gap:10px;">
               ${p.status === 'in_progress' ? '<div class="pulse-spinner"></div>' : '✓'}
               <span>${escapeHtml(p.progressStep)}</span>
             </div>
-          \` : ''}
+          ` : ''}
 
           <!-- Direct Facebook Post Link -->
-          ${(p.fbPostUrl || p.fbPostId) ? \`
+          ${(p.fbPostUrl || p.fbPostId) ? `
             <div style="margin-top:10px;">
               <a href="${escapeHtml(p.fbPostUrl || ((p.fbPostId && p.fbPostId.startsWith('pfbid')) ? ('https://www.facebook.com/posts/' + p.fbPostId) : ((p.fbPostId && p.fbPostId.length > 5) ? ('https://www.facebook.com/photo/?fbid=' + p.fbPostId) : 'https://www.facebook.com/me')))}" target="_blank" rel="noopener" class="btn btn-xs" style="background:linear-gradient(135deg,#10b981,#059669); color:#fff; width:fit-content;">
                 🔗 Xem Bài Viết Trực Tiếp (ID: ${escapeHtml(p.fbPostId)})
               </a>
             </div>
-          \` : (p.status === 'completed' ? \`
+          ` : (p.status === 'completed' ? `
             <div style="margin-top:10px;">
               <a href="${escapeHtml(p.targetUrl || (p.targetId ? ('https://www.facebook.com/' + p.targetId) : 'https://www.facebook.com/me'))}" target="_blank" rel="noopener" class="btn btn-xs" style="background:linear-gradient(135deg,#10b981,#059669); color:#fff; width:fit-content;">
                 🔗 Mở Trang Facebook Đã Đăng
               </a>
             </div>
-          \` : '')}
+          ` : '')}
 
-          ${p.lastError && p.status !== 'completed' ? \`<div style="font-size:12px; color:#f87171; margin-top:10px; background:rgba(239,68,68,0.1); padding:10px 14px; border-radius:12px; border:1px solid rgba(239,68,68,0.3);">⚠️ Lỗi: ${escapeHtml(p.lastError)}</div>\` : ''}
+          ${p.lastError && p.status !== 'completed' ? `<div style="font-size:12px; color:#f87171; margin-top:10px; background:rgba(239,68,68,0.1); padding:10px 14px; border-radius:12px; border:1px solid rgba(239,68,68,0.3);">⚠️ Lỗi: ${escapeHtml(p.lastError)}</div>` : ''}
 
-          ${p.status === 'completed' && p.fbPostId ? \`
+          ${p.status === 'completed' && p.fbPostId ? `
           <div style="display:flex; gap:12px; margin-top:12px; padding:10px 14px; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:12px; align-items:center; justify-content:space-between;">
             <div style="display:flex; gap:16px; font-size:13px; font-weight:700;">
               <span style="color:#60a5fa;">👍 ${(p.metrics?.likes) || 0}</span>
@@ -1385,21 +1385,21 @@
             </div>
             <button class="btn btn-xs" style="background:linear-gradient(135deg,rgba(99,102,241,0.2),rgba(139,92,246,0.2));color:#a78bfa;border:1px solid rgba(99,102,241,0.3);" onclick="openInteractionModal('${safeId}')">📊 Chi tiết</button>
           </div>
-          \` : ''}
+          ` : ''}
 
           <div style="display:flex; justify-content:space-between; align-items:center; margin-top:16px; padding-top:12px; border-top:1px solid var(--border-color);">
             <span style="font-size:11px; color:var(--text-dim);">
-              ID: ${displayId} ${p.fbPostId ? \`• FB: <strong style="color:#34d399;">${escapeHtml(p.fbPostId)}</strong>\` : ''}
+              ID: ${displayId} ${p.fbPostId ? `• FB: <strong style="color:#34d399;">${escapeHtml(p.fbPostId)}</strong>` : ''}
             </span>
             <div style="display:flex; gap:8px;">
               ${actionBtn}
-              ${p.status === 'completed' && p.fbPostId ? \`<button class="btn-icon" style="color:#a78bfa;border-color:rgba(99,102,241,0.3);" onclick="openInteractionModal('${safeId}')" title="Quản lý tương tác">📊</button>\` : ''}
+              ${p.status === 'completed' && p.fbPostId ? `<button class="btn-icon" style="color:#a78bfa;border-color:rgba(99,102,241,0.3);" onclick="openInteractionModal('${safeId}')" title="Quản lý tương tác">📊</button>` : ''}
               <button class="btn-icon" onclick="duplicatePost('${safeId}')" title="Nhân Bản">📋</button>
               <button class="btn-icon" style="color:#f87171; border-color:rgba(239,68,68,0.3);" onclick="deletePost('${safeId}')" title="Xóa">🗑️</button>
             </div>
           </div>
         </div>
-      \`;
+      `;
       } catch (e) {
         console.error("renderPostCard error:", e);
         return '';
