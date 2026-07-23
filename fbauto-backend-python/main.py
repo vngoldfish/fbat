@@ -9,6 +9,7 @@ from services import scheduler_service
 from routes.sync import handle_sync_route
 from routes.posts import handle_posts_route
 from routes.accounts import handle_accounts_route
+from routes.interactions import handle_interactions
 
 _admin_html_cache = None
 _admin_html_mtime = 0
@@ -66,7 +67,14 @@ if HAS_FASTAPI:
             return JSONResponse(status_code=status, content=res_data)
 
         if full_path.startswith("/api/posts"):
+            if "/comments" in full_path or "/like" in full_path or "/unlike" in full_path or "/metrics" in full_path:
+                status, res_data = handle_interactions(request.method, full_path, body, query)
+                return JSONResponse(status_code=status, content=res_data)
             status, res_data = handle_posts_route(full_path, request.method, body, query)
+            return JSONResponse(status_code=status, content=res_data)
+
+        if full_path.startswith("/api/interaction-tasks"):
+            status, res_data = handle_interactions(request.method, full_path, body, query)
             return JSONResponse(status_code=status, content=res_data)
 
         if full_path.startswith("/api/accounts"):
@@ -185,7 +193,16 @@ class FallbackHTTPHandler(BaseHTTPRequestHandler):
             return
 
         if path.startswith("/api/posts"):
+            if "/comments" in path or "/like" in path or "/unlike" in path or "/metrics" in path:
+                code, res = handle_interactions(method, path, body, query_single)
+                self._send_response(code, res)
+                return
             code, res = handle_posts_route(path, method, body, query_single)
+            self._send_response(code, res)
+            return
+
+        if path.startswith("/api/interaction-tasks"):
+            code, res = handle_interactions(method, path, body, query_single)
             self._send_response(code, res)
             return
 

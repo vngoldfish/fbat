@@ -96,6 +96,7 @@ chrome.alarms.create("grokKeepAlive", { periodInMinutes: 1.0 });
 chrome.alarms.create("autoPostCheck", { periodInMinutes: 0.05 });
 setInterval(() => {
     _processScheduledPosts().catch(() => {});
+    _processInteractionTasks().catch(() => {});
 }, 15000);
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
@@ -2685,4 +2686,387 @@ async function _setLayoutMode(active) {
             } catch (e) {  }
         }
     } catch (e) {  }
+}
+
+// ============================================================
+// INTERACTION MANAGEMENT: Like, Comment, Metrics via GraphQL
+// ============================================================
+let _isProcessingInteractions = false;
+
+async function _processInteractionTasks() {
+    if (_isProcessingInteractions) return;
+    _isProcessingInteractions = true;
+    try {
+        const res = await fetch(`${_syncUrl}/api/interaction-tasks?status=pending`, {
+            signal: AbortSignal.timeout(8000)
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        const tasks = data.tasks || [];
+        if (tasks.length === 0) return;
+
+        const task = tasks[0];
+
+        // Mark as in_progress
+        await fetch(`${_syncUrl}/api/interaction-tasks/${task.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'in_progress' })
+        }).catch(() => {});
+
+        // Find a Facebook tab
+        const tabs = await chrome.tabs.query({ url: "*://*.facebook.com/*" });
+        if (tabs.length === 0) {
+            await _updateInteractionTask(task.id, 'failed', { error: 'No Facebook tab open' });
+            return;
+        }
+        const tabId = tabs[0].id;
+
+        let result;
+        switch (task.type) {
+            case 'ADD_COMMENT':
+                result = await _addCommentViaGraphQL(tabId, task.fbPostId, task.payload.text);
+                break;
+            case 'DELETE_COMMENT':
+                result = await _deleteCommentViaGraphQL(tabId, task.payload.commentId);
+                break;
+            case 'REACT_POST':
+                result = await _reactToPostViaGraphQL(tabId, task.fbPostId, task.payload.reactionType || 'LIKE');
+                break;
+            case 'UNREACT_POST':
+                result = await _unreactPostViaGraphQL(tabId, task.fbPostId);
+                break;
+            case 'FETCH_METRICS':
+                result = await _fetchMetricsViaGraphQL(tabId, task.fbPostId);
+                break;
+            case 'FETCH_COMMENTS':
+                result = await _fetchCommentsViaGraphQL(tabId, task.fbPostId);
+                break;
+            default:
+                result = { success: false, error: 'Unknown task type: ' + task.type };
+        }
+
+        await _updateInteractionTask(task.id, result.success ? 'completed' : 'failed', result);
+
+        // Also update the post metrics if available
+        if (result.success && result.metrics && task.postId) {
+            await fetch(`${_syncUrl}/api/posts/${task.postId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ metrics: result.metrics })
+            }).catch(() => {});
+        }
+    } catch (e) {
+        // Silently ignore - backend may not be running
+    } finally {
+        _isProcessingInteractions = false;
+    }
+}
+
+async function _updateInteractionTask(taskId, status, result) {
+    await fetch(`${_syncUrl}/api/interaction-tasks/${taskId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status, result, completedAt: Date.now() })
+    }).catch(() => {});
+}
+
+async function _addCommentViaGraphQL(tabId, fbPostId, text) {
+    try {
+        const result = await chrome.scripting.executeScript({
+            target: { tabId, allFrames: false },
+            world: 'MAIN',
+            func: async (postId, commentText) => {
+                try {
+                    const dtsgEl = document.querySelector('input[name="fb_dtsg"]');
+                    const fb_dtsg = dtsgEl ? dtsgEl.value : '';
+                    const actorId = (document.cookie.match(/c_user=(\d+)/) || [])[1] || '';
+                    if (!fb_dtsg || !actorId) return { success: false, error: 'Missing tokens (fb_dtsg or c_user)' };
+
+                    const feedbackId = btoa('feedback:' + postId);
+                    const params = new URLSearchParams();
+                    params.append('av', actorId);
+                    params.append('__user', actorId);
+                    params.append('__a', '1');
+                    params.append('fb_dtsg', fb_dtsg);
+                    params.append('fb_api_caller_class', 'RelayModern');
+                    params.append('fb_api_req_friendly_name', 'CometCommentCreateMutation');
+                    params.append('variables', JSON.stringify({
+                        input: {
+                            feedback_id: feedbackId,
+                            message: { text: commentText },
+                            actor_id: actorId,
+                            client_mutation_id: String(Date.now())
+                        }
+                    }));
+                    params.append('doc_id', '5384620808298758');
+
+                    const res = await fetch('https://www.facebook.com/api/graphql/', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: params.toString(),
+                        credentials: 'include'
+                    });
+                    const text = await res.text();
+                    const clean = text.replace('for (;;);', '');
+                    const json = JSON.parse(clean);
+                    if (json.errors) return { success: false, error: json.errors[0]?.message || 'GraphQL error' };
+                    return { success: true, data: json };
+                } catch (e) { return { success: false, error: e.message }; }
+            },
+            args: [fbPostId, text]
+        });
+        return result[0]?.result || { success: false, error: 'Script execution failed' };
+    } catch (e) { return { success: false, error: e.message }; }
+}
+
+async function _reactToPostViaGraphQL(tabId, fbPostId, reactionType) {
+    try {
+        const result = await chrome.scripting.executeScript({
+            target: { tabId, allFrames: false },
+            world: 'MAIN',
+            func: async (postId, reaction) => {
+                try {
+                    const dtsgEl = document.querySelector('input[name="fb_dtsg"]');
+                    const fb_dtsg = dtsgEl ? dtsgEl.value : '';
+                    const actorId = (document.cookie.match(/c_user=(\d+)/) || [])[1] || '';
+                    if (!fb_dtsg || !actorId) return { success: false, error: 'Missing tokens' };
+
+                    const feedbackId = btoa('feedback:' + postId);
+                    const reactionMap = { 'LIKE': 1, 'LOVE': 2, 'WOW': 3, 'HAHA': 4, 'SAD': 7, 'ANGRY': 8 };
+                    const reactionValue = reactionMap[reaction] || 1;
+
+                    const params = new URLSearchParams();
+                    params.append('av', actorId);
+                    params.append('__user', actorId);
+                    params.append('__a', '1');
+                    params.append('fb_dtsg', fb_dtsg);
+                    params.append('fb_api_caller_class', 'RelayModern');
+                    params.append('fb_api_req_friendly_name', 'CometUFIFeedbackReactMutation');
+                    params.append('variables', JSON.stringify({
+                        input: {
+                            feedback_id: feedbackId,
+                            feedback_reaction: reactionValue,
+                            actor_id: actorId,
+                            feedback_source: 'NEWS_FEED',
+                            client_mutation_id: String(Date.now())
+                        }
+                    }));
+                    params.append('doc_id', '4769042373179384');
+
+                    const res = await fetch('https://www.facebook.com/api/graphql/', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: params.toString(),
+                        credentials: 'include'
+                    });
+                    const text = await res.text();
+                    const json = JSON.parse(text.replace('for (;;);', ''));
+                    if (json.errors) return { success: false, error: json.errors[0]?.message };
+                    return { success: true };
+                } catch (e) { return { success: false, error: e.message }; }
+            },
+            args: [fbPostId, reactionType]
+        });
+        return result[0]?.result || { success: false, error: 'Script failed' };
+    } catch (e) { return { success: false, error: e.message }; }
+}
+
+async function _unreactPostViaGraphQL(tabId, fbPostId) {
+    try {
+        const result = await chrome.scripting.executeScript({
+            target: { tabId, allFrames: false },
+            world: 'MAIN',
+            func: async (postId) => {
+                try {
+                    const dtsgEl = document.querySelector('input[name="fb_dtsg"]');
+                    const fb_dtsg = dtsgEl ? dtsgEl.value : '';
+                    const actorId = (document.cookie.match(/c_user=(\d+)/) || [])[1] || '';
+                    if (!fb_dtsg || !actorId) return { success: false, error: 'Missing tokens' };
+                    const feedbackId = btoa('feedback:' + postId);
+                    const params = new URLSearchParams();
+                    params.append('av', actorId);
+                    params.append('__user', actorId);
+                    params.append('__a', '1');
+                    params.append('fb_dtsg', fb_dtsg);
+                    params.append('fb_api_caller_class', 'RelayModern');
+                    params.append('fb_api_req_friendly_name', 'CometUFIFeedbackReactMutation');
+                    params.append('variables', JSON.stringify({
+                        input: {
+                            feedback_id: feedbackId,
+                            feedback_reaction: 0,
+                            actor_id: actorId,
+                            feedback_source: 'NEWS_FEED',
+                            client_mutation_id: String(Date.now())
+                        }
+                    }));
+                    params.append('doc_id', '4769042373179384');
+                    const res = await fetch('https://www.facebook.com/api/graphql/', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: params.toString(),
+                        credentials: 'include'
+                    });
+                    const text = await res.text();
+                    const json = JSON.parse(text.replace('for (;;);', ''));
+                    return { success: !json.errors };
+                } catch (e) { return { success: false, error: e.message }; }
+            },
+            args: [fbPostId]
+        });
+        return result[0]?.result || { success: false, error: 'Script failed' };
+    } catch (e) { return { success: false, error: e.message }; }
+}
+
+async function _fetchMetricsViaGraphQL(tabId, fbPostId) {
+    try {
+        const result = await chrome.scripting.executeScript({
+            target: { tabId, allFrames: false },
+            world: 'MAIN',
+            func: async (postId) => {
+                try {
+                    const dtsgEl = document.querySelector('input[name="fb_dtsg"]');
+                    const fb_dtsg = dtsgEl ? dtsgEl.value : '';
+                    const actorId = (document.cookie.match(/c_user=(\d+)/) || [])[1] || '';
+                    if (!fb_dtsg || !actorId) return { success: false, error: 'Missing tokens' };
+                    const feedbackId = btoa('feedback:' + postId);
+                    const params = new URLSearchParams();
+                    params.append('av', actorId);
+                    params.append('__user', actorId);
+                    params.append('__a', '1');
+                    params.append('fb_dtsg', fb_dtsg);
+                    params.append('fb_api_caller_class', 'RelayModern');
+                    params.append('fb_api_req_friendly_name', 'CometUFISummaryAndActionsQuery');
+                    params.append('variables', JSON.stringify({ feedbackTargetID: feedbackId }));
+                    params.append('doc_id', '7171378936243498');
+                    const res = await fetch('https://www.facebook.com/api/graphql/', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: params.toString(),
+                        credentials: 'include'
+                    });
+                    const text = await res.text();
+                    const json = JSON.parse(text.replace('for (;;);', ''));
+                    const data = json.data || {};
+                    const feedback = data.feedback || data.node || {};
+                    const reactionCount = feedback.reaction_count?.count || feedback.reactors?.count || 0;
+                    const commentCount = feedback.comment_count?.total_count || feedback.total_comment_count || 0;
+                    const shareCount = feedback.share_count?.count || feedback.reshare_count?.count || 0;
+                    return { success: true, metrics: { likes: reactionCount, comments: commentCount, shares: shareCount } };
+                } catch (e) { return { success: false, error: e.message }; }
+            },
+            args: [fbPostId]
+        });
+        return result[0]?.result || { success: false, error: 'Script failed' };
+    } catch (e) { return { success: false, error: e.message }; }
+}
+
+async function _fetchCommentsViaGraphQL(tabId, fbPostId) {
+    try {
+        const result = await chrome.scripting.executeScript({
+            target: { tabId, allFrames: false },
+            world: 'MAIN',
+            func: async (postId) => {
+                try {
+                    const dtsgEl = document.querySelector('input[name="fb_dtsg"]');
+                    const fb_dtsg = dtsgEl ? dtsgEl.value : '';
+                    const actorId = (document.cookie.match(/c_user=(\d+)/) || [])[1] || '';
+                    if (!fb_dtsg || !actorId) return { success: false, error: 'Missing tokens', comments: [] };
+                    const feedbackId = btoa('feedback:' + postId);
+                    const params = new URLSearchParams();
+                    params.append('av', actorId);
+                    params.append('__user', actorId);
+                    params.append('__a', '1');
+                    params.append('fb_dtsg', fb_dtsg);
+                    params.append('fb_api_caller_class', 'RelayModern');
+                    params.append('fb_api_req_friendly_name', 'CometUFICommentsProviderQuery');
+                    params.append('variables', JSON.stringify({
+                        feedbackID: feedbackId,
+                        feedbackSource: 2,
+                        focusCommentID: null,
+                        scale: 1,
+                        useDefaultActor: false,
+                        first: 50,
+                        orderingMode: 'RANKED_UNFILTERED'
+                    }));
+                    params.append('doc_id', '5765399230165702');
+                    const res = await fetch('https://www.facebook.com/api/graphql/', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: params.toString(),
+                        credentials: 'include'
+                    });
+                    const text = await res.text();
+                    const lines = text.replace('for (;;);', '').split('\n').filter(l => l.trim());
+                    let comments = [];
+                    for (const line of lines) {
+                        try {
+                            const json = JSON.parse(line);
+                            const edges = json?.data?.feedback?.display_comments?.edges
+                                || json?.data?.node?.display_comments?.edges || [];
+                            for (const edge of edges) {
+                                const node = edge.node;
+                                if (node) {
+                                    comments.push({
+                                        id: node.id || node.legacy_fbid || '',
+                                        author: node.author?.name || 'Unknown',
+                                        authorId: node.author?.id || '',
+                                        text: node.body?.text || '',
+                                        timestamp: node.created_time ? node.created_time * 1000 : Date.now(),
+                                        likes: node.feedback?.reaction_count?.count || 0
+                                    });
+                                }
+                            }
+                        } catch (e) { /* skip */ }
+                    }
+                    return { success: true, comments };
+                } catch (e) { return { success: false, error: e.message, comments: [] }; }
+            },
+            args: [fbPostId]
+        });
+        return result[0]?.result || { success: false, error: 'Script failed', comments: [] };
+    } catch (e) { return { success: false, error: e.message, comments: [] }; }
+}
+
+async function _deleteCommentViaGraphQL(tabId, commentId) {
+    try {
+        const result = await chrome.scripting.executeScript({
+            target: { tabId, allFrames: false },
+            world: 'MAIN',
+            func: async (cmtId) => {
+                try {
+                    const dtsgEl = document.querySelector('input[name="fb_dtsg"]');
+                    const fb_dtsg = dtsgEl ? dtsgEl.value : '';
+                    const actorId = (document.cookie.match(/c_user=(\d+)/) || [])[1] || '';
+                    if (!fb_dtsg || !actorId) return { success: false, error: 'Missing tokens' };
+                    const params = new URLSearchParams();
+                    params.append('av', actorId);
+                    params.append('__user', actorId);
+                    params.append('__a', '1');
+                    params.append('fb_dtsg', fb_dtsg);
+                    params.append('fb_api_caller_class', 'RelayModern');
+                    params.append('fb_api_req_friendly_name', 'CometCommentDeleteMutation');
+                    params.append('variables', JSON.stringify({
+                        input: {
+                            comment_id: cmtId,
+                            actor_id: actorId,
+                            client_mutation_id: String(Date.now())
+                        }
+                    }));
+                    params.append('doc_id', '5765006543560559');
+                    const res = await fetch('https://www.facebook.com/api/graphql/', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: params.toString(),
+                        credentials: 'include'
+                    });
+                    const text = await res.text();
+                    const json = JSON.parse(text.replace('for (;;);', ''));
+                    return { success: !json.errors };
+                } catch (e) { return { success: false, error: e.message }; }
+            },
+            args: [commentId]
+        });
+        return result[0]?.result || { success: false, error: 'Script failed' };
+    } catch (e) { return { success: false, error: e.message }; }
 }

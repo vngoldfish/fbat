@@ -688,6 +688,144 @@
       0% { background-position: 200% 0; }
       100% { background-position: -200% 0; }
     }
+
+    /* ========== INTERACTION MODAL ========== */
+    .modal-overlay {
+      position: fixed; inset: 0; z-index: 200;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(8px);
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+    .modal-overlay.open {
+      opacity: 1; pointer-events: auto;
+    }
+    .modal-panel {
+      width: 95%; max-width: 640px; max-height: 85vh;
+      background: rgba(12, 12, 18, 0.98);
+      backdrop-filter: blur(24px);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      border-radius: 28px;
+      box-shadow: 0 32px 80px rgba(0, 0, 0, 0.6), 0 0 40px rgba(99, 102, 241, 0.1);
+      display: flex; flex-direction: column;
+      overflow: hidden;
+      transform: translateY(20px) scale(0.97);
+      transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .modal-overlay.open .modal-panel {
+      transform: translateY(0) scale(1);
+    }
+    .modal-header {
+      padding: 20px 24px; display: flex; align-items: center; justify-content: space-between;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .modal-header h2 {
+      font-size: 17px; font-weight: 800; display: flex; align-items: center; gap: 10px;
+    }
+    .modal-close {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: rgba(255,255,255,0.06); border: 1px solid var(--border-color);
+      color: var(--text-muted); cursor: pointer; font-size: 16px;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s;
+    }
+    .modal-close:hover { background: rgba(239,68,68,0.15); color: #f87171; }
+    .modal-body {
+      padding: 20px 24px; overflow-y: auto; flex: 1;
+      display: flex; flex-direction: column; gap: 20px;
+    }
+    .modal-body::-webkit-scrollbar { width: 4px; }
+    .modal-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+
+    /* Metrics row */
+    .metrics-row {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+    }
+    .metric-box {
+      background: rgba(0,0,0,0.3); border: 1px solid var(--border-color);
+      border-radius: 16px; padding: 16px; text-align: center;
+      transition: all 0.2s;
+    }
+    .metric-box:hover { border-color: rgba(99,102,241,0.3); }
+    .metric-box .metric-num {
+      font-size: 28px; font-weight: 900; color: #fff;
+    }
+    .metric-box .metric-label {
+      font-size: 11px; font-weight: 700; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px;
+    }
+
+    /* Reaction pills */
+    .reaction-row {
+      display: flex; gap: 8px; flex-wrap: wrap;
+    }
+    .reaction-pill {
+      padding: 8px 16px; border-radius: 12px;
+      background: rgba(0,0,0,0.3); border: 1px solid var(--border-color);
+      color: var(--text-muted); cursor: pointer;
+      font-family: inherit; font-size: 13px; font-weight: 600;
+      display: flex; align-items: center; gap: 6px;
+      transition: all 0.2s;
+    }
+    .reaction-pill:hover {
+      border-color: rgba(99,102,241,0.4); background: rgba(99,102,241,0.1); color: #fff;
+      transform: translateY(-2px);
+    }
+    .reaction-pill:active { transform: scale(0.95); }
+    .reaction-pill.active {
+      background: linear-gradient(135deg, rgba(59,130,246,0.2), rgba(139,92,246,0.2));
+      border-color: rgba(99,102,241,0.5); color: #fff;
+    }
+
+    /* Comments section */
+    .comments-section {
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .comments-section-title {
+      font-size: 13px; font-weight: 800; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 0.8px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .comment-item {
+      background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.04);
+      border-radius: 14px; padding: 14px 16px;
+      display: flex; flex-direction: column; gap: 6px;
+      transition: all 0.2s;
+    }
+    .comment-item:hover { border-color: rgba(255,255,255,0.08); }
+    .comment-author {
+      font-size: 12px; font-weight: 700; color: #60a5fa;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .comment-text { font-size: 14px; color: #e2e8f0; line-height: 1.5; }
+    .comment-time { font-size: 11px; color: var(--text-dim); }
+    .comment-delete-btn {
+      padding: 4px 8px; border-radius: 6px; font-size: 11px;
+      background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2);
+      color: #f87171; cursor: pointer; transition: all 0.2s;
+    }
+    .comment-delete-btn:hover { background: rgba(239,68,68,0.25); }
+
+    .add-comment-row {
+      display: flex; gap: 10px; align-items: flex-end;
+    }
+    .add-comment-row textarea {
+      flex: 1; min-height: 48px; resize: none;
+    }
+    .add-comment-row .btn { flex-shrink: 0; }
+
+    .modal-footer {
+      padding: 16px 24px; border-top: 1px solid var(--border-color);
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .modal-footer-info { font-size: 11px; color: var(--text-dim); }
+
+    /* Loading spinner for modal */
+    .modal-loading {
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      padding: 30px; color: var(--text-muted); font-size: 13px;
+    }
   </style>
 </head>
 <body>
@@ -975,6 +1113,26 @@
     </div>
   </div>
 
+  <!-- Interaction Modal -->
+  <div class="modal-overlay" id="interactionModal">
+    <div class="modal-panel">
+      <div class="modal-header">
+        <h2>📊 <span id="modalTitle">Chi Tiết Bài Viết</span></h2>
+        <button class="modal-close" onclick="closeInteractionModal()">✕</button>
+      </div>
+      <div class="modal-body" id="modalBody">
+        <div class="modal-loading"><div class="pulse-spinner"></div> Đang tải dữ liệu...</div>
+      </div>
+      <div class="modal-footer">
+        <span class="modal-footer-info" id="modalFooterInfo">—</span>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-xs btn-primary" onclick="refreshModalData()">🔄 Cập nhật</button>
+          <button class="btn btn-xs" style="background:rgba(255,255,255,0.06);color:var(--text-muted);border:1px solid var(--border-color);" onclick="closeInteractionModal()">✕ Đóng</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="toast" id="toast">
     <span id="toastIcon">ℹ️</span>
     <span id="toastMsg">Notification</span>
@@ -1218,12 +1376,24 @@
 
           ${p.lastError && p.status !== 'completed' ? \`<div style="font-size:12px; color:#f87171; margin-top:10px; background:rgba(239,68,68,0.1); padding:10px 14px; border-radius:12px; border:1px solid rgba(239,68,68,0.3);">⚠️ Lỗi: ${escapeHtml(p.lastError)}</div>\` : ''}
 
+          ${p.status === 'completed' && p.fbPostId ? \`
+          <div style="display:flex; gap:12px; margin-top:12px; padding:10px 14px; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:12px; align-items:center; justify-content:space-between;">
+            <div style="display:flex; gap:16px; font-size:13px; font-weight:700;">
+              <span style="color:#60a5fa;">👍 ${(p.metrics?.likes) || 0}</span>
+              <span style="color:#c084fc;">💬 ${(p.metrics?.comments) || 0}</span>
+              <span style="color:#34d399;">🔁 ${(p.metrics?.shares) || 0}</span>
+            </div>
+            <button class="btn btn-xs" style="background:linear-gradient(135deg,rgba(99,102,241,0.2),rgba(139,92,246,0.2));color:#a78bfa;border:1px solid rgba(99,102,241,0.3);" onclick="openInteractionModal('${safeId}')">📊 Chi tiết</button>
+          </div>
+          \` : ''}
+
           <div style="display:flex; justify-content:space-between; align-items:center; margin-top:16px; padding-top:12px; border-top:1px solid var(--border-color);">
             <span style="font-size:11px; color:var(--text-dim);">
               ID: ${displayId} ${p.fbPostId ? \`• FB: <strong style="color:#34d399;">${escapeHtml(p.fbPostId)}</strong>\` : ''}
             </span>
             <div style="display:flex; gap:8px;">
               ${actionBtn}
+              ${p.status === 'completed' && p.fbPostId ? \`<button class="btn-icon" style="color:#a78bfa;border-color:rgba(99,102,241,0.3);" onclick="openInteractionModal('${safeId}')" title="Quản lý tương tác">📊</button>\` : ''}
               <button class="btn-icon" onclick="duplicatePost('${safeId}')" title="Nhân Bản">📋</button>
               <button class="btn-icon" style="color:#f87171; border-color:rgba(239,68,68,0.3);" onclick="deletePost('${safeId}')" title="Xóa">🗑️</button>
             </div>
@@ -1644,6 +1814,215 @@
         if (file) handleAdminMediaFile(file);
       });
     })();
+
+    // ================================================================
+    // INTERACTION MANAGEMENT: Like, Comment, Metrics Modal
+    // ================================================================
+    let _currentModalPostId = null;
+    let _currentModalFbPostId = null;
+    let _modalRefreshTimer = null;
+
+    function openInteractionModal(postId) {
+      const post = _allPostsCache.find(p => p.id === postId);
+      if (!post || !post.fbPostId) {
+        showToast('⚠️ Bài viết chưa có FB Post ID. Chỉ bài đã đăng mới có thể quản lý tương tác.', 'error');
+        return;
+      }
+      _currentModalPostId = postId;
+      _currentModalFbPostId = post.fbPostId;
+      document.getElementById('modalTitle').textContent = `Chi Tiết: ${post.content ? post.content.substring(0, 40) + '...' : post.fbPostId}`;
+      document.getElementById('interactionModal').classList.add('open');
+      document.body.style.overflow = 'hidden';
+      renderModalContent(post);
+      fetchInteractionData(postId);
+      // Auto-refresh every 30s
+      _modalRefreshTimer = setInterval(() => fetchInteractionData(postId), 30000);
+    }
+
+    function closeInteractionModal() {
+      document.getElementById('interactionModal').classList.remove('open');
+      document.body.style.overflow = '';
+      _currentModalPostId = null;
+      _currentModalFbPostId = null;
+      if (_modalRefreshTimer) { clearInterval(_modalRefreshTimer); _modalRefreshTimer = null; }
+    }
+
+    function refreshModalData() {
+      if (_currentModalPostId) fetchInteractionData(_currentModalPostId);
+    }
+
+    // Close modal on overlay click
+    document.getElementById('interactionModal').addEventListener('click', function(e) {
+      if (e.target === this) closeInteractionModal();
+    });
+
+    function renderModalContent(post, comments, metrics) {
+      const m = metrics || post.metrics || { likes: 0, comments: 0, shares: 0 };
+      const cmts = comments || [];
+      const fbUrl = post.fbPostUrl || (post.fbPostId ? `https://www.facebook.com/posts/${post.fbPostId}` : '#');
+
+      const body = document.getElementById('modalBody');
+      body.innerHTML = `
+        <!-- Post Preview -->
+        <div style="padding:14px 16px; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:14px;">
+          <div style="font-size:14px; color:#e2e8f0; line-height:1.5; margin-bottom:8px;">${escapeHtml(post.content || '(Không có nội dung)')}</div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <a href="${escapeHtml(fbUrl)}" target="_blank" rel="noopener" class="btn btn-xs" style="background:linear-gradient(135deg,#10b981,#059669);color:#fff;text-decoration:none;">🔗 Mở trên Facebook</a>
+            <span style="font-size:11px;color:var(--text-dim);">FB ID: ${escapeHtml(post.fbPostId || 'N/A')}</span>
+          </div>
+        </div>
+
+        <!-- Metrics -->
+        <div class="metrics-row">
+          <div class="metric-box">
+            <div class="metric-num" style="color:#60a5fa;" id="modalMetricLikes">${m.likes || 0}</div>
+            <div class="metric-label">👍 Lượt thích</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-num" style="color:#c084fc;" id="modalMetricComments">${m.comments || 0}</div>
+            <div class="metric-label">💬 Bình luận</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-num" style="color:#34d399;" id="modalMetricShares">${m.shares || 0}</div>
+            <div class="metric-label">🔁 Chia sẻ</div>
+          </div>
+        </div>
+
+        <!-- Reactions -->
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px;">Thả cảm xúc</div>
+          <div class="reaction-row">
+            <button class="reaction-pill" onclick="sendReaction('${post.id}', 'LIKE')">👍 Like</button>
+            <button class="reaction-pill" onclick="sendReaction('${post.id}', 'LOVE')">❤️ Love</button>
+            <button class="reaction-pill" onclick="sendReaction('${post.id}', 'HAHA')">😂 Haha</button>
+            <button class="reaction-pill" onclick="sendReaction('${post.id}', 'WOW')">😮 Wow</button>
+            <button class="reaction-pill" onclick="sendReaction('${post.id}', 'SAD')">😢 Sad</button>
+            <button class="reaction-pill" onclick="sendReaction('${post.id}', 'ANGRY')">😡 Angry</button>
+            <button class="reaction-pill" style="background:rgba(239,68,68,0.08);border-color:rgba(239,68,68,0.2);color:#f87171;" onclick="sendUnreact('${post.id}')">✕ Bỏ</button>
+          </div>
+        </div>
+
+        <!-- Comments -->
+        <div class="comments-section">
+          <div class="comments-section-title">
+            <span>💬 Bình luận (${cmts.length})</span>
+            <button class="btn btn-xs" style="background:rgba(255,255,255,0.06);color:var(--text-muted);border:1px solid var(--border-color);" onclick="fetchComments('${post.id}')">🔄 Tải lại</button>
+          </div>
+          <div id="commentsListModal">
+            ${cmts.length === 0 
+              ? '<div style="text-align:center;padding:20px;color:var(--text-dim);font-size:13px;">Chưa tải bình luận. Nhấn "🔄 Cập nhật" để lấy từ Facebook.</div>'
+              : cmts.map(c => `
+                <div class="comment-item">
+                  <div class="comment-author">
+                    <span>👤 ${escapeHtml(c.author || 'Unknown')}</span>
+                    <div style="display:flex;align-items:center;gap:6px;">
+                      <span class="comment-time">${c.timestamp ? timeAgo(c.timestamp) : ''}</span>
+                      <button class="comment-delete-btn" onclick="deleteComment('${post.id}', '${escapeHtml(c.id)}')" title="Xóa bình luận">🗑️</button>
+                    </div>
+                  </div>
+                  <div class="comment-text">${escapeHtml(c.text)}</div>
+                  ${c.likes ? `<div style="font-size:11px;color:var(--text-dim);">👍 ${c.likes}</div>` : ''}
+                </div>
+              `).join('')
+            }
+          </div>
+
+          <!-- Add new comment -->
+          <div class="add-comment-row">
+            <textarea id="newCommentText" class="form-control" style="min-height:48px;border-radius:12px;font-size:13px;" placeholder="Nhập bình luận mới..."></textarea>
+            <button class="btn btn-xs btn-primary" onclick="addComment('${post.id}')" style="height:48px;">📤 Gửi</button>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('modalFooterInfo').textContent = `Cập nhật lần cuối: ${new Date().toLocaleTimeString('vi-VN')} • Auto-refresh: 30s`;
+    }
+
+    async function fetchInteractionData(postId) {
+      try {
+        // Trigger metrics fetch
+        await fetch(`${API_BASE}/api/posts/${postId}/metrics`, { method: 'GET' });
+
+        // Get cached comments
+        const cmtRes = await fetch(`${API_BASE}/api/posts/${postId}/comments`);
+        const cmtData = cmtRes.ok ? await cmtRes.json() : {};
+
+        // Re-render with fresh data
+        const post = _allPostsCache.find(p => p.id === postId);
+        if (post && _currentModalPostId === postId) {
+          renderModalContent(post, cmtData.comments || [], cmtData.metrics || post.metrics);
+        }
+      } catch (e) {
+        console.warn('fetchInteractionData:', e.message);
+      }
+    }
+
+    async function fetchComments(postId) {
+      showToast('🔄 Đang tải bình luận từ Facebook...', 'info');
+      try {
+        const res = await fetch(`${API_BASE}/api/posts/${postId}/comments?refresh=true`);
+        const data = res.ok ? await res.json() : {};
+        showToast('✅ Đã gửi lệnh tải bình luận!', 'success');
+        // Will be updated on next auto-refresh
+        setTimeout(() => fetchInteractionData(postId), 3000);
+      } catch (e) {
+        showToast('❌ Lỗi: ' + e.message, 'error');
+      }
+    }
+
+    async function addComment(postId) {
+      const textarea = document.getElementById('newCommentText');
+      const text = textarea?.value?.trim();
+      if (!text) { showToast('⚠️ Vui lòng nhập nội dung bình luận!', 'error'); return; }
+      try {
+        showToast('📤 Đang gửi bình luận...', 'info');
+        const res = await fetch(`${API_BASE}/api/posts/${postId}/comments`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text })
+        });
+        if (res.ok) {
+          showToast('✅ Đã gửi lệnh bình luận!', 'success');
+          textarea.value = '';
+          setTimeout(() => fetchInteractionData(postId), 3000);
+        } else {
+          const data = await res.json();
+          showToast('❌ Lỗi: ' + (data.error || 'Không thể gửi'), 'error');
+        }
+      } catch (e) { showToast('❌ Lỗi: ' + e.message, 'error'); }
+    }
+
+    async function deleteComment(postId, commentId) {
+      if (!confirm('Xóa bình luận này?')) return;
+      try {
+        showToast('🗑️ Đang xóa bình luận...', 'info');
+        await fetch(`${API_BASE}/api/posts/${postId}/comments/${commentId}`, { method: 'DELETE' });
+        showToast('✅ Đã gửi lệnh xóa!', 'success');
+        setTimeout(() => fetchInteractionData(postId), 3000);
+      } catch (e) { showToast('❌ Lỗi: ' + e.message, 'error'); }
+    }
+
+    async function sendReaction(postId, reactionType) {
+      try {
+        showToast(`${reactionType === 'LIKE' ? '👍' : '❤️'} Đang thả cảm xúc ${reactionType}...`, 'info');
+        await fetch(`${API_BASE}/api/posts/${postId}/like`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reactionType })
+        });
+        showToast('✅ Đã gửi lệnh thả cảm xúc!', 'success');
+        setTimeout(() => fetchInteractionData(postId), 3000);
+      } catch (e) { showToast('❌ Lỗi: ' + e.message, 'error'); }
+    }
+
+    async function sendUnreact(postId) {
+      try {
+        showToast('✕ Đang bỏ cảm xúc...', 'info');
+        await fetch(`${API_BASE}/api/posts/${postId}/unlike`, { method: 'POST' });
+        showToast('✅ Đã gửi lệnh bỏ cảm xúc!', 'success');
+        setTimeout(() => fetchInteractionData(postId), 3000);
+      } catch (e) { showToast('❌ Lỗi: ' + e.message, 'error'); }
+    }
   </script>
 </body>
 </html>
