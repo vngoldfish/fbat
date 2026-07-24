@@ -2206,12 +2206,22 @@ async function _executePostItem(post) {
                                         }
                                     }
 
+                                    let extractedFeedbackId = null;
+                                    if (clean) {
+                                        const fM = clean.match(/"feedback"\s*:\s*\{[^}]*?"id"\s*:\s*"([^"]+)"/) ||
+                                                   clean.match(/"subscription_target_id"\s*:\s*"(\d+)"/);
+                                        if (fM && fM[1]) {
+                                            extractedFeedbackId = fM[1].startsWith("ZmVl") ? fM[1] : btoa("feedback:" + fM[1]);
+                                        }
+                                    }
+
                                     if (effectiveId || realFbUrl || (!clean.includes('"errors"') && (clean.includes('"story"') || clean.includes('"id"')))) {
                                         return {
                                             success: true,
                                             tier: "graphql",
                                             fbPostId: effectiveId ? String(effectiveId) : null,
                                             fbPostUrl: purl || realFbUrl,
+                                            fbFeedbackId: extractedFeedbackId,
                                             response: "Story created via HAR doc_id " + targetDocId
                                         };
                                     }
@@ -2254,12 +2264,23 @@ async function _executePostItem(post) {
                     
                     // Exec Auto-Seeding Comments if configured
                     if (payload.seedingComments && Array.isArray(payload.seedingComments) && payload.seedingComments.length > 0) {
-                        await updateStep(`💬 Đang tự động gửi ${payload.seedingComments.length} bình luận seeding...`);
+                        await updateStep(`💬 Đang mở bài viết và tự động gửi ${payload.seedingComments.length} bình luận seeding...`);
+                        
+                        // Navigate Facebook tab to post URL so DOM/Tokens match the published story
+                        if (purl && purl.includes("facebook.com")) {
+                            try {
+                                await chrome.tabs.update(targetTab.id, { url: purl, active: false });
+                                await new Promise(r => setTimeout(r, 2500));
+                                await ensureTabLoaded(targetTab.id);
+                            } catch(e) {}
+                        }
+
                         try {
+                            const knownFeedbackId = graphqlResult?.fbFeedbackId || null;
                             const seedingResults = await chrome.scripting.executeScript({
                                 target: { tabId: targetTab.id },
                                 world: "MAIN",
-                                func: async (postId, comments, fallbackActorId) => {
+                                func: async (postId, knownFeedbackId, comments, fallbackActorId) => {
                                     let fb_dtsg = "";
                                     let lsd = "";
                                     const html = document.documentElement.innerHTML;
@@ -2307,12 +2328,18 @@ async function _executePostItem(post) {
                                         jazoest += fb_dtsg.charCodeAt(i);
                                     }
 
-                                    const feedbackCandidates = [
-                                        btoa("feedback:" + postId),
-                                        btoa("Feedback:" + postId),
-                                        btoa("feedback:" + actorId + "_" + postId),
-                                        btoa("Feedback:" + actorId + "_" + postId)
-                                    ];
+                                    const feedbackCandidates = [];
+                                    if (knownFeedbackId) {
+                                        feedbackCandidates.push(knownFeedbackId);
+                                        if (!knownFeedbackId.startsWith("ZmVl")) {
+                                            feedbackCandidates.push(btoa("feedback:" + knownFeedbackId));
+                                            feedbackCandidates.push(btoa("Feedback:" + knownFeedbackId));
+                                        }
+                                    }
+                                    if (postId) {
+                                        feedbackCandidates.push(btoa("feedback:" + postId));
+                                        feedbackCandidates.push(btoa("Feedback:" + postId));
+                                    }
 
                                     if (String(postId).startsWith("pfbid")) {
                                         const numMatch = html.match(new RegExp(`"${postId}"[^}]*?"legacy_story_id":"(\\d+)"`)) ||
@@ -2384,7 +2411,7 @@ async function _executePostItem(post) {
 
                                     return { success: successCount > 0, successCount, total: comments.length, errors };
                                 },
-                                args: [pid, payload.seedingComments, fallbackActorId]
+                                args: [pid, knownFeedbackId, payload.seedingComments, fallbackActorId]
                             });
 
                             const seedResult = seedingResults?.[0]?.result;
