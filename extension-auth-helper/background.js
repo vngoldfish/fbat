@@ -2330,24 +2330,27 @@ async function _executePostItem(post) {
 
                                     const feedbackCandidates = [];
                                     if (knownFeedbackId) {
-                                        feedbackCandidates.push(knownFeedbackId);
-                                        if (!knownFeedbackId.startsWith("ZmVl")) {
+                                        if (knownFeedbackId.startsWith("ZmVl")) {
+                                            feedbackCandidates.push(knownFeedbackId);
+                                        } else {
                                             feedbackCandidates.push(btoa("feedback:" + knownFeedbackId));
                                             feedbackCandidates.push(btoa("Feedback:" + knownFeedbackId));
                                         }
                                     }
-                                    if (postId) {
+
+                                    if (postId && /^\d+$/.test(String(postId))) {
                                         feedbackCandidates.push(btoa("feedback:" + postId));
                                         feedbackCandidates.push(btoa("Feedback:" + postId));
                                     }
 
-                                    if (String(postId).startsWith("pfbid")) {
-                                        const numMatch = html.match(new RegExp(`"${postId}"[^}]*?"legacy_story_id":"(\\d+)"`)) ||
-                                                         html.match(new RegExp(`"${postId}"[^}]*?"id":"(\\d+)"`)) ||
-                                                         html.match(/"legacy_story_id"\s*:\s*"(\d+)"/);
-                                        if (numMatch && numMatch[1]) {
-                                            feedbackCandidates.unshift(btoa("feedback:" + numMatch[1]));
-                                            feedbackCandidates.unshift(btoa("Feedback:" + numMatch[1]));
+                                    // Extract all numeric story/feedback target IDs from HTML DOM
+                                    const numMatches = html.matchAll(/"(?:legacy_story_id|story_fbid|post_id|story_id|subscription_target_id|feedback_target_id|target_id)"\s*:\s*"(\d+)"/g);
+                                    for (const m of numMatches) {
+                                        if (m[1] && m[1].length >= 8) {
+                                            const b1 = btoa("feedback:" + m[1]);
+                                            const b2 = btoa("Feedback:" + m[1]);
+                                            if (!feedbackCandidates.includes(b1)) feedbackCandidates.push(b1);
+                                            if (!feedbackCandidates.includes(b2)) feedbackCandidates.push(b2);
                                         }
                                     }
 
@@ -2402,6 +2405,34 @@ async function _executePostItem(post) {
                                                 } catch(e) {
                                                     errors.push(e.message);
                                                 }
+                                            }
+                                        }
+
+                                        // DOM Automation Fallback if GraphQL did not succeed
+                                        if (!commentSuccess) {
+                                            try {
+                                                const commentBox = document.querySelector(
+                                                    'div[role="textbox"][aria-label*="bình luận"], ' +
+                                                    'div[role="textbox"][aria-label*="Comment"], ' +
+                                                    'div[role="textbox"][aria-label*="Viết"], ' +
+                                                    'div[role="textbox"][contenteditable="true"], ' +
+                                                    'form div[role="textbox"]'
+                                                );
+                                                if (commentBox) {
+                                                    commentBox.focus();
+                                                    document.execCommand("insertText", false, commentText.trim());
+                                                    commentBox.dispatchEvent(new Event("input", { bubbles: true }));
+                                                    await new Promise(r => setTimeout(r, 400));
+                                                    
+                                                    const enterEvt = new KeyboardEvent("keydown", {
+                                                        key: "Enter", code: "Enter", keyCode: 13, which: 13,
+                                                        bubbles: true, cancelable: true
+                                                    });
+                                                    commentBox.dispatchEvent(enterEvt);
+                                                    commentSuccess = true;
+                                                }
+                                            } catch(domErr) {
+                                                errors.push("DOM error: " + domErr.message);
                                             }
                                         }
 
