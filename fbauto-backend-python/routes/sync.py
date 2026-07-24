@@ -51,8 +51,9 @@ def handle_sync_route(path: str, method: str, body: dict = None) -> tuple:
         post_id = post_data.get("id")
         print(f"📌 [Python Backend] Extension Auto-Post Received: {post_data}")
         
+        target_status = post_data.get("status", "completed")
         updated = database.update_item("posts", post_id, {
-            "status": "completed",
+            "status": target_status,
             "executedAt": int(time.time() * 1000),
             "source": "chrome_extension"
         }) if post_id else None
@@ -63,7 +64,7 @@ def handle_sync_route(path: str, method: str, body: dict = None) -> tuple:
                 "content": post_data.get("content", ""),
                 "postType": post_data.get("postType", "post"),
                 "targetUrl": post_data.get("targetUrl", ""),
-                "status": "completed",
+                "status": target_status,
                 "scheduledTime": int(time.time() * 1000),
                 "executedAt": int(time.time() * 1000),
                 "source": "chrome_extension"

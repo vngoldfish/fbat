@@ -1861,17 +1861,6 @@ async function _executePostItem(post) {
 
         await updateStep("🚀 1/4: Đã nhận lệnh, đang khởi động tab Facebook...");
 
-        // 1. Notify Python Backend (lightweight - no base64 data)
-        try {
-            const notifyPayload = { id: post.id, postType, content: payload.content, targetUrl: payload.targetUrl, hasMedia: !!payload.mediaData };
-            await fetch(`${_syncUrl}/sync/auto-post`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "X-Ext-Id": extId },
-                body: JSON.stringify(notifyPayload),
-                signal: AbortSignal.timeout(10000)
-            });
-        } catch (backendErr) { console.warn("⚠️ auto-post notify failed:", backendErr.message); }
-
         // 2. Find or create Facebook tab
         let targetFbUrl = post.targetUrl;
         if (!targetFbUrl || !targetFbUrl.includes("facebook.com")) {
