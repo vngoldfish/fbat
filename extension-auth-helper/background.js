@@ -3046,8 +3046,16 @@ async function _processAutoReplyMonitor() {
                         const actorId = cUserMatch ? cUserMatch[1] : fallbackActorId;
                         if (!fb_dtsg || !actorId) return { newlyReplied: [] };
 
+                        let jazoest = "2";
+                        for (let i = 0; i < fb_dtsg.length; i++) {
+                            jazoest += fb_dtsg.charCodeAt(i);
+                        }
+
                         const newlyReplied = [];
                         const repliedSet = new Set(repliedIdsArray || []);
+
+                        // Extract numeric storyId from postId or page HTML DOM
+                        const storyId = String(postId).replace(/\D/g, "") || (html.match(/"legacy_story_id"\s*:\s*"(\d+)"/)?.[1]);
 
                         // Find all "Reply" / "Trả lời" buttons on screen dynamically
                         const allButtons = Array.from(document.querySelectorAll('div[role="button"], span[role="button"], a[role="button"]'));
@@ -3064,38 +3072,117 @@ async function _processAutoReplyMonitor() {
                             const commentHash = "cmt_" + textContent.slice(0, 50).replace(/\s+/g, '_');
                             if (repliedSet.has(commentHash)) continue;
 
-                            // Auto-React to comment if configured
-                            if (autoReactType && autoReactType !== "NONE") {
-                                const likeBtn = commentElem ? commentElem.querySelector('div[role="button"][aria-label*="Thích"], div[role="button"][aria-label*="Like"]') : null;
-                                if (likeBtn) {
-                                    try { likeBtn.click(); } catch(e) {}
+                            // Extract comment numeric ID if present
+                            const cmtFbidMatch = textContent.match(/(\d{10,})/) || commentElem?.outerHTML?.match(/comment_id[=":]+(\d+)/);
+                            const commentId = cmtFbidMatch ? cmtFbidMatch[1] : null;
+
+                            let apiSuccess = false;
+
+                            // 1. Direct HAR GraphQL API attempt
+                            if (storyId && commentId) {
+                                const commentFeedbackId = btoa("feedback:" + storyId + "_" + commentId);
+                                const parentCommentFbid = btoa("comment:" + storyId + "_" + commentId);
+                                const replyMsg = autoReplyTexts[Math.floor(Math.random() * autoReplyTexts.length)];
+
+                                // 1A. React via HAR GraphQL
+                                if (autoReactType && autoReactType !== "NONE") {
+                                    const reactionMap = { "LIKE": "1635855486666999", "LOVE": "1635855606666987", "HAHA": "1635855726666975", "WOW": "1635855846666963" };
+                                    const reactionId = reactionMap[autoReactType] || "1635855486666999";
+                                    try {
+                                        const reactVars = {
+                                            input: {
+                                                attribution_id_v2: "CometSinglePostDialogRoot.react,comet.post.single_dialog,unexpected," + Date.now() + ",905819,,,",
+                                                feedback_id: commentFeedbackId,
+                                                feedback_reaction_id: reactionId,
+                                                feedback_source: "OBJECT",
+                                                is_tracking_encrypted: true,
+                                                session_id: String(Date.now()),
+                                                actor_id: actorId,
+                                                client_mutation_id: String(Date.now())
+                                            },
+                                            scale: 2
+                                        };
+                                        const params = new URLSearchParams();
+                                        params.append("av", actorId); params.append("__user", actorId); params.append("__a", "1");
+                                        params.append("fb_dtsg", fb_dtsg); params.append("jazoest", jazoest); params.append("lsd", lsd);
+                                        params.append("fb_api_caller_class", "RelayModern");
+                                        params.append("fb_api_req_friendly_name", "CometUFIFeedbackReactMutation");
+                                        params.append("server_timestamps", "true");
+                                        params.append("variables", JSON.stringify(reactVars));
+                                        params.append("doc_id", "27646120298312844");
+                                        await fetch("https://www.facebook.com/api/graphql/", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: params.toString(), credentials: "include" });
+                                    } catch(e) {}
+                                }
+
+                                // 1B. Reply via HAR GraphQL
+                                if (autoReplyTexts && autoReplyTexts.length > 0) {
+                                    try {
+                                        const replyVars = {
+                                            feedLocation: "POST_PERMALINK_DIALOG", feedbackSource: 2, groupID: null,
+                                            input: {
+                                                client_mutation_id: String(Date.now()), attachments: null,
+                                                feedback_id: commentFeedbackId, formatting_style: null,
+                                                is_inline_vote_enabled_for_qna: false,
+                                                message: { ranges: [], text: replyMsg },
+                                                reply_comment_parent_fbid: parentCommentFbid,
+                                                reply_target_clicked: true,
+                                                attribution_id_v2: "CometSinglePostDialogRoot.react,comet.post.single_dialog,unexpected," + Date.now() + ",905819,,,",
+                                                feedback_source: "OBJECT", idempotence_token: "client:" + String(Date.now()), session_id: String(Date.now())
+                                            },
+                                            scale: 2, useDefaultActor: false, translationType: "AUTO_TRANSLATE", canUseNicknameOnComet: false
+                                        };
+                                        const params = new URLSearchParams();
+                                        params.append("av", actorId); params.append("__user", actorId); params.append("__a", "1");
+                                        params.append("fb_dtsg", fb_dtsg); params.append("jazoest", jazoest); params.append("lsd", lsd);
+                                        params.append("fb_api_caller_class", "RelayModern");
+                                        params.append("fb_api_req_friendly_name", "useCometUFICreateCommentMutation");
+                                        params.append("server_timestamps", "true");
+                                        params.append("variables", JSON.stringify(replyVars));
+                                        params.append("doc_id", "27829190080054105");
+
+                                        const res = await fetch("https://www.facebook.com/api/graphql/", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: params.toString(), credentials: "include" });
+                                        const text = await res.text();
+                                        let json = null;
+                                        try { json = JSON.parse(text.replace(/^for\s*\([^)]*\);?/, "")); } catch(e) {}
+                                        if (json && json.data && !json.errors) {
+                                            apiSuccess = true;
+                                            newlyReplied.push(commentHash);
+                                        }
+                                    } catch(e) {}
                                 }
                             }
 
-                            // Auto-Reply to comment if configured
-                            if (autoReplyTexts && autoReplyTexts.length > 0) {
-                                try {
-                                    btn.click();
-                                    await new Promise(r => setTimeout(r, 800));
+                            // 2. DOM Automation Fallback if GraphQL API did not execute
+                            if (!apiSuccess) {
+                                if (autoReactType && autoReactType !== "NONE") {
+                                    const likeBtn = commentElem ? commentElem.querySelector('div[role="button"][aria-label*="Thích"], div[role="button"][aria-label*="Like"]') : null;
+                                    if (likeBtn) { try { likeBtn.click(); } catch(e) {} }
+                                }
 
-                                    const replyBox = (commentElem ? commentElem.querySelector('div[role="textbox"]') : null) || 
-                                                     document.querySelector('div[role="textbox"][aria-label*="trả lời"], div[role="textbox"][aria-label*="Reply"], div[role="textbox"][contenteditable="true"]');
-                                    if (replyBox) {
-                                        replyBox.focus();
-                                        const replyMsg = autoReplyTexts[Math.floor(Math.random() * autoReplyTexts.length)];
-                                        document.execCommand("insertText", false, replyMsg);
-                                        replyBox.dispatchEvent(new Event("input", { bubbles: true }));
-                                        await new Promise(r => setTimeout(r, 500));
-                                        
-                                        const enterEvt = new KeyboardEvent("keydown", {
-                                            key: "Enter", code: "Enter", keyCode: 13, which: 13,
-                                            bubbles: true, cancelable: true
-                                        });
-                                        replyBox.dispatchEvent(enterEvt);
-                                        newlyReplied.push(commentHash);
-                                        await new Promise(r => setTimeout(r, 1000));
-                                    }
-                                } catch(e) {}
+                                if (autoReplyTexts && autoReplyTexts.length > 0) {
+                                    try {
+                                        btn.click();
+                                        await new Promise(r => setTimeout(r, 800));
+
+                                        const replyBox = (commentElem ? commentElem.querySelector('div[role="textbox"]') : null) || 
+                                                         document.querySelector('div[role="textbox"][aria-label*="trả lời"], div[role="textbox"][aria-label*="Reply"], div[role="textbox"][contenteditable="true"]');
+                                        if (replyBox) {
+                                            replyBox.focus();
+                                            const replyMsg = autoReplyTexts[Math.floor(Math.random() * autoReplyTexts.length)];
+                                            document.execCommand("insertText", false, replyMsg);
+                                            replyBox.dispatchEvent(new Event("input", { bubbles: true }));
+                                            await new Promise(r => setTimeout(r, 500));
+                                            
+                                            const enterEvt = new KeyboardEvent("keydown", {
+                                                key: "Enter", code: "Enter", keyCode: 13, which: 13,
+                                                bubbles: true, cancelable: true
+                                            });
+                                            replyBox.dispatchEvent(enterEvt);
+                                            newlyReplied.push(commentHash);
+                                            await new Promise(r => setTimeout(r, 1000));
+                                        }
+                                    } catch(e) {}
+                                }
                             }
                         }
 
