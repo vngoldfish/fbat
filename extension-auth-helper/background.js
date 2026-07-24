@@ -3049,177 +3049,131 @@ async function _processAutoReplyMonitor() {
 
                         const newlyReplied = [];
                         const repliedSet = new Set(repliedIdsArray || []);
+                        const scannedComments = [];
 
                         const storyId = String(postId).replace(/\D/g, "");
-                        if (!storyId) return { newlyReplied: [] };
 
-                        const targetFeedbackId = btoa("feedback:" + storyId);
+                        // 1. Scan DOM comments & Reply buttons dynamically
+                        const allButtons = Array.from(document.querySelectorAll('div[role="button"], span[role="button"], a[role="button"]'));
+                        const replyBtns = allButtons.filter(b => {
+                            const txt = (b.innerText || b.getAttribute('aria-label') || '').toLowerCase().trim();
+                            return (txt === 'trả lời' || txt === 'reply' || txt.startsWith('trả lời') || txt.startsWith('reply')) && !b.disabled;
+                        });
 
-                        // 1. Fetch comments via Pure Background GraphQL (CometSinglePostDialogContentQuery)
-                        try {
-                            const queryVars = {
-                                feedbackSource: 2,
-                                feedLocation: "POST_PERMALINK_DIALOG",
-                                focusCommentID: null,
-                                privacySelectorRenderLocation: "COMET_STREAM",
-                                renderLocation: "permalink",
-                                scale: 2,
-                                useDefaultActor: false,
-                                id: targetFeedbackId
-                            };
+                        for (let i = 0; i < replyBtns.length; i++) {
+                            const btn = replyBtns[i];
+                            const commentElem = btn.closest('div[role="article"]') || btn.closest('li') || btn.parentElement?.parentElement?.parentElement;
+                            const textContent = (commentElem ? commentElem.innerText : btn.parentElement?.innerText) || "";
+                            const lines = textContent.split('\n').map(l => l.trim()).filter(Boolean);
+                            const authorName = lines[0] || "Khách hàng";
+                            const cmtText = lines.slice(1).join(' ') || textContent;
+                            const commentHash = "cmt_" + textContent.slice(0, 50).replace(/\s+/g, '_');
 
-                            const queryParams = new URLSearchParams();
-                            queryParams.append("av", actorId);
-                            queryParams.append("__user", actorId);
-                            queryParams.append("__a", "1");
-                            queryParams.append("fb_dtsg", fb_dtsg);
-                            queryParams.append("jazoest", jazoest);
-                            queryParams.append("lsd", lsd);
-                            queryParams.append("fb_api_caller_class", "RelayModern");
-                            queryParams.append("fb_api_req_friendly_name", "CometSinglePostDialogContentQuery");
-                            queryParams.append("variables", JSON.stringify(queryVars));
-                            queryParams.append("doc_id", "25494545246909173");
+                            if (!scannedComments.some(c => c.id === commentHash)) {
+                                scannedComments.push({
+                                    id: commentHash,
+                                    authorName: authorName,
+                                    authorId: "",
+                                    text: cmtText,
+                                    time: Date.now(),
+                                    isSelf: false
+                                });
+                            }
 
-                            const res = await fetch("https://www.facebook.com/api/graphql/", {
-                                method: "POST",
-                                headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                                body: queryParams.toString(),
-                                credentials: "include"
-                            });
+                            if (repliedSet.has(commentHash)) continue;
 
-                            const text = await res.text();
-                            const lines = text.split("\n");
-                            const foundCommentsToReply = [];
-                            const scannedComments = [];
+                            // Auto-React
+                            if (autoReactType && autoReactType !== "NONE") {
+                                const likeBtn = commentElem ? commentElem.querySelector('div[role="button"][aria-label*="Thích"], div[role="button"][aria-label*="Like"]') : null;
+                                if (likeBtn) { try { likeBtn.click(); } catch(e) {} }
+                            }
 
-                            for (const line of lines) {
-                                if (!line.includes('"legacy_fbid"') && !line.includes('"Comment"')) continue;
+                            // Auto-Reply
+                            if (autoReplyTexts && autoReplyTexts.length > 0) {
                                 try {
-                                    const parsed = JSON.parse(line.replace(/^for\s*\([^)]*\);?/, ""));
-                                    
-                                    function scanComments(obj) {
-                                        if (!obj || typeof obj !== "object") return;
-                                        if (obj.legacy_fbid || (obj.__typename === "Comment" && obj.id)) {
-                                            const cmtId = String(obj.legacy_fbid || obj.id || "");
-                                            const authObj = obj.author || obj.comment_author || {};
-                                            const authName = typeof authObj === "object" ? (authObj.name || authObj.short_name || "Khách hàng") : String(authObj || "Khách hàng");
-                                            const authId = typeof authObj === "object" ? String(authObj.id || "") : "";
-                                            
-                                            let cmtText = "";
-                                            if (obj.body && typeof obj.body === "object" && obj.body.text) cmtText = String(obj.body.text);
-                                            else if (obj.message && typeof obj.message === "object" && obj.message.text) cmtText = String(obj.message.text);
-                                            else if (typeof obj.body === "string") cmtText = obj.body;
-                                            else if (typeof obj.message === "string") cmtText = obj.message;
+                                    btn.click();
+                                    await new Promise(r => setTimeout(r, 600));
 
-                                            const cmtTime = obj.created_time ? (obj.created_time * 1000) : Date.now();
+                                    const replyBox = (commentElem ? commentElem.querySelector('div[role="textbox"]') : null) || 
+                                                     document.querySelector('div[role="textbox"][aria-label*="trả lời"], div[role="textbox"][aria-label*="Reply"], div[role="textbox"][contenteditable="true"]');
+                                    if (replyBox) {
+                                        replyBox.focus();
+                                        const replyMsg = autoReplyTexts[Math.floor(Math.random() * autoReplyTexts.length)];
+                                        document.execCommand("insertText", false, replyMsg);
+                                        replyBox.dispatchEvent(new Event("input", { bubbles: true }));
+                                        await new Promise(r => setTimeout(r, 400));
+                                        
+                                        const enterEvt = new KeyboardEvent("keydown", {
+                                            key: "Enter", code: "Enter", keyCode: 13, which: 13,
+                                            bubbles: true, cancelable: true
+                                        });
+                                        replyBox.dispatchEvent(enterEvt);
+                                        newlyReplied.push(commentHash);
+                                        repliedSet.add(commentHash);
+                                        await new Promise(r => setTimeout(r, 1000));
+                                    }
+                                } catch(e) {}
+                            }
+                        }
 
-                                            if (cmtId && cmtId !== storyId) {
-                                                if (!scannedComments.some(c => c.id === cmtId)) {
-                                                    scannedComments.push({
-                                                        id: cmtId,
-                                                        authorName: authName,
-                                                        authorId: authId,
-                                                        text: cmtText,
-                                                        time: cmtTime,
-                                                        isSelf: authId === actorId
-                                                    });
-                                                }
+                        // 2. Scan GraphQL background response if storyId exists
+                        if (storyId) {
+                            try {
+                                const targetFeedbackId = btoa("feedback:" + storyId);
+                                const queryVars = {
+                                    feedbackSource: 2, feedLocation: "POST_PERMALINK_DIALOG", focusCommentID: null,
+                                    privacySelectorRenderLocation: "COMET_STREAM", renderLocation: "permalink", scale: 2, useDefaultActor: false, id: targetFeedbackId
+                                };
 
-                                                if (authId !== actorId && cmtText) {
-                                                    if (!foundCommentsToReply.includes(cmtId)) {
-                                                        foundCommentsToReply.push(cmtId);
+                                const queryParams = new URLSearchParams();
+                                queryParams.append("av", actorId); queryParams.append("__user", actorId); queryParams.append("__a", "1");
+                                queryParams.append("fb_dtsg", fb_dtsg); queryParams.append("jazoest", jazoest); queryParams.append("lsd", lsd);
+                                queryParams.append("fb_api_caller_class", "RelayModern");
+                                queryParams.append("fb_api_req_friendly_name", "CometSinglePostDialogContentQuery");
+                                queryParams.append("variables", JSON.stringify(queryVars));
+                                queryParams.append("doc_id", "25494545246909173");
+
+                                const res = await fetch("https://www.facebook.com/api/graphql/", {
+                                    method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: queryParams.toString(), credentials: "include"
+                                });
+                                const text = await res.text();
+                                const linesArr = text.split("\n");
+
+                                for (const line of linesArr) {
+                                    if (!line.includes('"legacy_fbid"') && !line.includes('"Comment"')) continue;
+                                    try {
+                                        const parsed = JSON.parse(line.replace(/^for\s*\([^)]*\);?/, ""));
+                                        function scanGqlComments(obj) {
+                                            if (!obj || typeof obj !== "object") return;
+                                            if (obj.legacy_fbid || (obj.__typename === "Comment" && obj.id)) {
+                                                const cmtId = String(obj.legacy_fbid || obj.id || "");
+                                                const authObj = obj.author || obj.comment_author || {};
+                                                const authName = typeof authObj === "object" ? (authObj.name || authObj.short_name || "Khách hàng") : String(authObj || "Khách hàng");
+                                                const authId = typeof authObj === "object" ? String(authObj.id || "") : "";
+                                                let cmtText = "";
+                                                if (obj.body && typeof obj.body === "object" && obj.body.text) cmtText = String(obj.body.text);
+                                                else if (obj.message && typeof obj.message === "object" && obj.message.text) cmtText = String(obj.message.text);
+                                                else if (typeof obj.body === "string") cmtText = obj.body;
+
+                                                const cmtTime = obj.created_time ? (obj.created_time * 1000) : Date.now();
+
+                                                if (cmtId && cmtId !== storyId) {
+                                                    if (!scannedComments.some(c => c.id === cmtId)) {
+                                                        scannedComments.push({
+                                                            id: cmtId, authorName: authName, authorId: authId, text: cmtText, time: cmtTime, isSelf: authId === actorId
+                                                        });
                                                     }
                                                 }
                                             }
+                                            for (const k of Object.keys(obj)) scanGqlComments(obj[k]);
                                         }
-                                        for (const key of Object.keys(obj)) {
-                                            scanComments(obj[key]);
-                                        }
-                                    }
-                                    scanComments(parsed);
-                                } catch(e) {}
-                            }
-
-                            for (const commentId of foundCommentsToReply) {
-                                const commentHash = "cmt_" + storyId + "_" + commentId;
-                                if (repliedSet.has(commentHash)) continue;
-                                newlyReplied.push(commentHash); // Mark immediately
-
-                                const commentFeedbackId = btoa("feedback:" + storyId + "_" + commentId);
-                                const parentCommentFbid = btoa("comment:" + storyId + "_" + commentId);
-
-                                // 1A. Auto-React via Pure Background GraphQL
-                                if (autoReactType && autoReactType !== "NONE") {
-                                    const reactionMap = { "LIKE": "1635855486666999", "LOVE": "1635855606666987", "HAHA": "1635855726666975", "WOW": "1635855846666963" };
-                                    const reactionId = reactionMap[autoReactType] || "1635855486666999";
-                                    try {
-                                        const reactVars = {
-                                            input: {
-                                                attribution_id_v2: "CometSinglePostDialogRoot.react,comet.post.single_dialog,unexpected," + Date.now() + ",905819,,,",
-                                                feedback_id: commentFeedbackId,
-                                                feedback_reaction_id: reactionId,
-                                                feedback_source: "OBJECT",
-                                                is_tracking_encrypted: true,
-                                                session_id: String(Date.now()),
-                                                actor_id: actorId,
-                                                client_mutation_id: String(Date.now())
-                                            },
-                                            scale: 2
-                                        };
-                                        const p = new URLSearchParams();
-                                        p.append("av", actorId); p.append("__user", actorId); p.append("__a", "1");
-                                        p.append("fb_dtsg", fb_dtsg); p.append("jazoest", jazoest); p.append("lsd", lsd);
-                                        p.append("fb_api_caller_class", "RelayModern");
-                                        p.append("fb_api_req_friendly_name", "CometUFIFeedbackReactMutation");
-                                        p.append("server_timestamps", "true");
-                                        p.append("variables", JSON.stringify(reactVars));
-                                        p.append("doc_id", "27646120298312844");
-                                        await fetch("https://www.facebook.com/api/graphql/", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: p.toString(), credentials: "include" });
+                                        scanGqlComments(parsed);
                                     } catch(e) {}
                                 }
-
-                                // 1B. Auto-Reply via Pure Background GraphQL
-                                if (autoReplyTexts && autoReplyTexts.length > 0) {
-                                    try {
-                                        const replyMsg = autoReplyTexts[Math.floor(Math.random() * autoReplyTexts.length)];
-                                        const replyVars = {
-                                            feedLocation: "POST_PERMALINK_DIALOG", feedbackSource: 2, groupID: null,
-                                            input: {
-                                                client_mutation_id: String(Date.now()), attachments: null,
-                                                feedback_id: commentFeedbackId, formatting_style: null,
-                                                is_inline_vote_enabled_for_qna: false,
-                                                message: { ranges: [], text: replyMsg },
-                                                reply_comment_parent_fbid: parentCommentFbid,
-                                                reply_target_clicked: true,
-                                                attribution_id_v2: "CometSinglePostDialogRoot.react,comet.post.single_dialog,unexpected," + Date.now() + ",905819,,,",
-                                                feedback_source: "OBJECT", idempotence_token: "client:" + String(Date.now()), session_id: String(Date.now())
-                                            },
-                                            scale: 2, useDefaultActor: false, translationType: "AUTO_TRANSLATE", canUseNicknameOnComet: false
-                                        };
-                                        const p = new URLSearchParams();
-                                        p.append("av", actorId); p.append("__user", actorId); p.append("__a", "1");
-                                        p.append("fb_dtsg", fb_dtsg); p.append("jazoest", jazoest); p.append("lsd", lsd);
-                                        p.append("fb_api_caller_class", "RelayModern");
-                                        p.append("fb_api_req_friendly_name", "useCometUFICreateCommentMutation");
-                                        p.append("server_timestamps", "true");
-                                        p.append("variables", JSON.stringify(replyVars));
-                                        p.append("doc_id", "27829190080054105");
-
-                                        const replyRes = await fetch("https://www.facebook.com/api/graphql/", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: p.toString(), credentials: "include" });
-                                        const replyText = await replyRes.text();
-                                        let replyJson = null;
-                                        try { replyJson = JSON.parse(replyText.replace(/^for\s*\([^)]*\);?/, "")); } catch(e) {}
-                                        if (replyJson && replyJson.data && !replyJson.errors) {
-                                            newlyReplied.push(commentHash);
-                                        }
-                                    } catch(e) {}
-                                }
-                            }
-
-                            return { newlyReplied, scannedComments };
-                        } catch(gqlErr) {
-                            return { newlyReplied, scannedComments: [] };
+                            } catch(e) {}
                         }
+
+                        return { newlyReplied, scannedComments };
                     },
                     args: [postId, autoReplyTexts, autoReactType, Array.from(repliedCommentIds), post.actorId || ""]
                 });
