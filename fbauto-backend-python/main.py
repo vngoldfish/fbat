@@ -9,7 +9,6 @@ from services import scheduler_service
 from routes.sync import handle_sync_route
 from routes.posts import handle_posts_route
 from routes.accounts import handle_accounts_route
-from routes.interactions import handle_interactions
 
 _admin_html_cache = None
 _admin_html_mtime = 0
@@ -67,95 +66,9 @@ if HAS_FASTAPI:
             return JSONResponse(status_code=status, content=res_data)
 
         if full_path.startswith("/api/posts"):
-            if "/comments" in full_path or "/like" in full_path or "/unlike" in full_path or "/metrics" in full_path:
-                status, res_data = handle_interactions(request.method, full_path, body, query)
-                return JSONResponse(status_code=status, content=res_data)
             status, res_data = handle_posts_route(full_path, request.method, body, query)
             return JSONResponse(status_code=status, content=res_data)
 
-        if full_path.startswith("/api/interaction-tasks"):
-            status, res_data = handle_interactions(request.method, full_path, body, query)
-            return JSONResponse(status_code=status, content=res_data)
-
-        # Real-time intercepted data from Extension content scripts
-        if full_path == "/api/realtime-data" and request.method == "POST":
-            import time as _time
-            posts_data = body.get("posts", [])
-            if posts_data:
-                # Save to wall_posts collection (merge with existing)
-                existing = database.get_collection("wall_posts")
-                existing_map = {p.get("postId") or p.get("fbPostId"): p for p in existing}
-                for item in posts_data:
-                    pid = item.get("postId", "")
-                    if pid:
-                        item["fbPostId"] = pid
-                        existing_map[pid] = item
-                database.save_collection("wall_posts", list(existing_map.values()))
-                # Also update metrics for matching posts in our system
-                our_posts = database.get_collection("posts")
-                changed = False
-                for item in posts_data:
-                    pid = item.get("postId", "")
-                    metrics = item.get("metrics")
-                    if pid and metrics:
-                        for p in our_posts:
-                            if p.get("fbPostId") == pid:
-                                p["metrics"] = metrics
-                                changed = True
-                if changed:
-                    database.save_collection("posts", our_posts)
-                # Update scan state
-                database.save_collection("wall_scan", [{"id": "scan_state", "scanRequested": False, "status": "live", "completedAt": int(_time.time() * 1000), "totalFound": len(existing_map), "scanned": len(posts_data), "message": "Real-time data"}])
-            return JSONResponse(status_code=200, content={"received": len(posts_data)})
-
-        # Wall Scanner endpoints
-        if full_path == "/api/wall-scan/status":
-            scan_state = database.get_collection("wall_scan")
-            state = scan_state[0] if scan_state else {"scanRequested": False}
-            return JSONResponse(status_code=200, content=state)
-
-        if full_path == "/api/wall-scan" and request.method == "POST":
-            # Trigger scan
-            scan_state = database.get_collection("wall_scan")
-            state = {"id": "scan_state", "scanRequested": True, "requestedAt": int(__import__('time').time() * 1000), "status": "waiting", "message": "Đang chờ Extension quét..."}
-            database.save_collection("wall_scan", [state])
-            return JSONResponse(status_code=200, content={"message": "Scan requested", "state": state})
-
-        if full_path == "/api/wall-scan/result" and request.method == "POST":
-            # Extension pushes scan results
-            scan_state = database.get_collection("wall_scan")
-            state = scan_state[0] if scan_state else {"id": "scan_state"}
-            state["scanRequested"] = False
-            state["status"] = "completed" if body.get("success") else "failed"
-            state["completedAt"] = int(__import__('time').time() * 1000)
-            state["error"] = body.get("error")
-            state["totalFound"] = body.get("totalFound", 0)
-            state["scanned"] = body.get("scanned", 0)
-            state["message"] = body.get("message", "")
-            database.save_collection("wall_scan", [state])
-
-            # Save scanned posts data
-            posts_data = body.get("posts", [])
-            if posts_data:
-                database.save_collection("wall_posts", posts_data)
-                # Also update metrics for any matching posts in our system
-                our_posts = database.get_collection("posts")
-                for scanned in posts_data:
-                    fb_id = scanned.get("fbPostId", "")
-                    metrics = scanned.get("metrics")
-                    if fb_id and metrics:
-                        for p in our_posts:
-                            if p.get("fbPostId") == fb_id:
-                                p["metrics"] = metrics
-                database.save_collection("posts", our_posts)
-
-            return JSONResponse(status_code=200, content={"message": "Scan results saved", "count": len(posts_data)})
-
-        if full_path == "/api/wall-scan/data" and request.method == "GET":
-            posts_data = database.get_collection("wall_posts")
-            scan_state = database.get_collection("wall_scan")
-            state = scan_state[0] if scan_state else {}
-            return JSONResponse(status_code=200, content={"posts": posts_data, "state": state})
 
         if full_path.startswith("/api/accounts"):
             status, res_data = handle_accounts_route(full_path, request.method, body)
@@ -273,94 +186,10 @@ class FallbackHTTPHandler(BaseHTTPRequestHandler):
             return
 
         if path.startswith("/api/posts"):
-            if "/comments" in path or "/like" in path or "/unlike" in path or "/metrics" in path:
-                code, res = handle_interactions(method, path, body, query_single)
-                self._send_response(code, res)
-                return
             code, res = handle_posts_route(path, method, body, query_single)
             self._send_response(code, res)
             return
 
-        if path.startswith("/api/interaction-tasks"):
-            code, res = handle_interactions(method, path, body, query_single)
-            self._send_response(code, res)
-            return
-        # Real-time intercepted data from Extension content scripts
-        if path == "/api/realtime-data" and method == "POST":
-            import time as _time
-            posts_data = body.get("posts", [])
-            if posts_data:
-                existing = database.get_collection("wall_posts")
-                existing_map = {p.get("postId") or p.get("fbPostId"): p for p in existing}
-                for item in posts_data:
-                    pid = item.get("postId", "")
-                    if pid:
-                        item["fbPostId"] = pid
-                        existing_map[pid] = item
-                database.save_collection("wall_posts", list(existing_map.values()))
-                our_posts = database.get_collection("posts")
-                changed = False
-                for item in posts_data:
-                    pid = item.get("postId", "")
-                    metrics = item.get("metrics")
-                    if pid and metrics:
-                        for p in our_posts:
-                            if p.get("fbPostId") == pid:
-                                p["metrics"] = metrics
-                                changed = True
-                if changed:
-                    database.save_collection("posts", our_posts)
-                database.save_collection("wall_scan", [{"id": "scan_state", "scanRequested": False, "status": "live", "completedAt": int(_time.time() * 1000), "totalFound": len(existing_map), "scanned": len(posts_data), "message": "Real-time data"}])
-            self._send_response(200, {"received": len(posts_data)})
-            return
-
-        # Wall Scanner endpoints
-        if path == "/api/wall-scan/status":
-            scan_state = database.get_collection("wall_scan")
-            state = scan_state[0] if scan_state else {"scanRequested": False}
-            self._send_response(200, state)
-            return
-
-        if path == "/api/wall-scan" and method == "POST":
-            import time as _time
-            state = {"id": "scan_state", "scanRequested": True, "requestedAt": int(_time.time() * 1000), "status": "waiting", "message": "Đang chờ Extension quét..."}
-            database.save_collection("wall_scan", [state])
-            self._send_response(200, {"message": "Scan requested", "state": state})
-            return
-
-        if path == "/api/wall-scan/result" and method == "POST":
-            import time as _time
-            scan_state = database.get_collection("wall_scan")
-            state = scan_state[0] if scan_state else {"id": "scan_state"}
-            state["scanRequested"] = False
-            state["status"] = "completed" if body.get("success") else "failed"
-            state["completedAt"] = int(_time.time() * 1000)
-            state["error"] = body.get("error")
-            state["totalFound"] = body.get("totalFound", 0)
-            state["scanned"] = body.get("scanned", 0)
-            state["message"] = body.get("message", "")
-            database.save_collection("wall_scan", [state])
-            posts_data = body.get("posts", [])
-            if posts_data:
-                database.save_collection("wall_posts", posts_data)
-                our_posts = database.get_collection("posts")
-                for scanned in posts_data:
-                    fb_id = scanned.get("fbPostId", "")
-                    metrics = scanned.get("metrics")
-                    if fb_id and metrics:
-                        for p in our_posts:
-                            if p.get("fbPostId") == fb_id:
-                                p["metrics"] = metrics
-                database.save_collection("posts", our_posts)
-            self._send_response(200, {"message": "Scan results saved", "count": len(posts_data)})
-            return
-
-        if path == "/api/wall-scan/data":
-            posts_data = database.get_collection("wall_posts")
-            scan_state = database.get_collection("wall_scan")
-            state = scan_state[0] if scan_state else {}
-            self._send_response(200, {"posts": posts_data, "state": state})
-            return
 
         if path.startswith("/api/accounts"):
             code, res = handle_accounts_route(path, method, body)
