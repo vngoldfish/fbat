@@ -3093,33 +3093,42 @@ async function _processAutoReplyMonitor() {
                             const scannedComments = [];
 
                             for (const line of lines) {
-                                if (!line.includes('"legacy_fbid"')) continue;
+                                if (!line.includes('"legacy_fbid"') && !line.includes('"Comment"')) continue;
                                 try {
                                     const parsed = JSON.parse(line.replace(/^for\s*\([^)]*\);?/, ""));
                                     
                                     function scanComments(obj) {
                                         if (!obj || typeof obj !== "object") return;
-                                        if (obj.legacy_fbid) {
-                                            const cmtId = String(obj.legacy_fbid);
-                                            const authName = obj.author ? String(obj.author.name || "Khách hàng") : "Khách hàng";
-                                            const authId = obj.author ? String(obj.author.id || "") : "";
-                                            const cmtText = obj.body ? String(obj.body.text || "") : "";
-                                            const cmtTime = obj.created_time ? obj.created_time * 1000 : Date.now();
+                                        if (obj.legacy_fbid || (obj.__typename === "Comment" && obj.id)) {
+                                            const cmtId = String(obj.legacy_fbid || obj.id || "");
+                                            const authObj = obj.author || obj.comment_author || {};
+                                            const authName = typeof authObj === "object" ? (authObj.name || authObj.short_name || "Khách hàng") : String(authObj || "Khách hàng");
+                                            const authId = typeof authObj === "object" ? String(authObj.id || "") : "";
+                                            
+                                            let cmtText = "";
+                                            if (obj.body && typeof obj.body === "object" && obj.body.text) cmtText = String(obj.body.text);
+                                            else if (obj.message && typeof obj.message === "object" && obj.message.text) cmtText = String(obj.message.text);
+                                            else if (typeof obj.body === "string") cmtText = obj.body;
+                                            else if (typeof obj.message === "string") cmtText = obj.message;
 
-                                            if (cmtId !== storyId && authId && authId !== actorId) {
-                                                if (!foundCommentsToReply.includes(cmtId)) {
-                                                    foundCommentsToReply.push(cmtId);
-                                                }
-                                            }
-                                            if (cmtId !== storyId) {
+                                            const cmtTime = obj.created_time ? (obj.created_time * 1000) : Date.now();
+
+                                            if (cmtId && cmtId !== storyId) {
                                                 if (!scannedComments.some(c => c.id === cmtId)) {
                                                     scannedComments.push({
                                                         id: cmtId,
                                                         authorName: authName,
                                                         authorId: authId,
                                                         text: cmtText,
-                                                        time: cmtTime
+                                                        time: cmtTime,
+                                                        isSelf: authId === actorId
                                                     });
+                                                }
+
+                                                if (authId !== actorId && cmtText) {
+                                                    if (!foundCommentsToReply.includes(cmtId)) {
+                                                        foundCommentsToReply.push(cmtId);
+                                                    }
                                                 }
                                             }
                                         }
