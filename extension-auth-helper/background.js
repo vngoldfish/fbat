@@ -3003,18 +3003,11 @@ async function _processAutoReplyMonitor() {
             const autoReplyTexts = post.autoReplyComments || [];
             const autoReactType = post.autoReactType || "NONE";
 
-            if (post.fbPostUrl && post.fbPostUrl.includes("facebook.com")) {
-                try {
-                    await chrome.tabs.update(fbTab.id, { url: post.fbPostUrl, active: false });
-                    await new Promise(r => setTimeout(r, 2500));
-                } catch(e) {}
-            }
-
             try {
                 const results = await chrome.scripting.executeScript({
                     target: { tabId: fbTab.id },
                     world: "MAIN",
-                    func: async (postId, fbPostUrl, autoReplyTexts, autoReactType, repliedIdsArray, fallbackActorId) => {
+                    func: async (postId, autoReplyTexts, autoReactType, repliedIdsArray, fallbackActorId) => {
                         let fb_dtsg = "";
                         let lsd = "";
                         const html = document.documentElement.innerHTML;
@@ -3054,37 +3047,60 @@ async function _processAutoReplyMonitor() {
                         const newlyReplied = [];
                         const repliedSet = new Set(repliedIdsArray || []);
 
-                        // Extract numeric storyId from postId or page HTML DOM
-                        const storyId = String(postId).replace(/\D/g, "") || (html.match(/"legacy_story_id"\s*:\s*"(\d+)"/)?.[1]);
+                        const storyId = String(postId).replace(/\D/g, "");
+                        if (!storyId) return { newlyReplied: [] };
 
-                        // Find all "Reply" / "Trả lời" buttons on screen dynamically
-                        const allButtons = Array.from(document.querySelectorAll('div[role="button"], span[role="button"], a[role="button"]'));
-                        const replyBtns = allButtons.filter(b => {
-                            const txt = (b.innerText || b.getAttribute('aria-label') || '').toLowerCase().trim();
-                            return (txt === 'trả lời' || txt === 'reply' || txt.startsWith('trả lời') || txt.startsWith('reply')) && !b.disabled;
-                        });
+                        const targetFeedbackId = btoa("feedback:" + storyId);
 
-                        for (let i = 0; i < replyBtns.length; i++) {
-                            const btn = replyBtns[i];
-                            const commentElem = btn.closest('div[role="article"]') || btn.closest('li') || btn.parentElement?.parentElement?.parentElement;
-                            const textContent = (commentElem ? commentElem.innerText : btn.parentElement?.innerText) || "";
-                            
-                            const commentHash = "cmt_" + textContent.slice(0, 50).replace(/\s+/g, '_');
-                            if (repliedSet.has(commentHash)) continue;
+                        // 1. Fetch comments via Pure Background GraphQL (CometSinglePostDialogContentQuery)
+                        try {
+                            const queryVars = {
+                                feedbackSource: 2,
+                                feedLocation: "POST_PERMALINK_DIALOG",
+                                focusCommentID: null,
+                                privacySelectorRenderLocation: "COMET_STREAM",
+                                renderLocation: "permalink",
+                                scale: 2,
+                                useDefaultActor: false,
+                                id: targetFeedbackId
+                            };
 
-                            // Extract comment numeric ID if present
-                            const cmtFbidMatch = textContent.match(/(\d{10,})/) || commentElem?.outerHTML?.match(/comment_id[=":]+(\d+)/);
-                            const commentId = cmtFbidMatch ? cmtFbidMatch[1] : null;
+                            const queryParams = new URLSearchParams();
+                            queryParams.append("av", actorId);
+                            queryParams.append("__user", actorId);
+                            queryParams.append("__a", "1");
+                            queryParams.append("fb_dtsg", fb_dtsg);
+                            queryParams.append("jazoest", jazoest);
+                            queryParams.append("lsd", lsd);
+                            queryParams.append("fb_api_caller_class", "RelayModern");
+                            queryParams.append("fb_api_req_friendly_name", "CometSinglePostDialogContentQuery");
+                            queryParams.append("variables", JSON.stringify(queryVars));
+                            queryParams.append("doc_id", "25494545246909173");
 
-                            let apiSuccess = false;
+                            const res = await fetch("https://www.facebook.com/api/graphql/", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                                body: queryParams.toString(),
+                                credentials: "include"
+                            });
 
-                            // 1. Direct HAR GraphQL API attempt
-                            if (storyId && commentId) {
+                            const text = await res.text();
+                            const commentMatches = text.matchAll(/"legacy_fbid"\s*:\s*"(\d+)"/g);
+                            const foundCommentIds = [];
+                            for (const cm of commentMatches) {
+                                if (cm[1] && cm[1] !== storyId && !foundCommentIds.includes(cm[1])) {
+                                    foundCommentIds.push(cm[1]);
+                                }
+                            }
+
+                            for (const commentId of foundCommentIds) {
+                                const commentHash = "cmt_" + storyId + "_" + commentId;
+                                if (repliedSet.has(commentHash)) continue;
+
                                 const commentFeedbackId = btoa("feedback:" + storyId + "_" + commentId);
                                 const parentCommentFbid = btoa("comment:" + storyId + "_" + commentId);
-                                const replyMsg = autoReplyTexts[Math.floor(Math.random() * autoReplyTexts.length)];
 
-                                // 1A. React via HAR GraphQL
+                                // 1A. Auto-React via Pure Background GraphQL
                                 if (autoReactType && autoReactType !== "NONE") {
                                     const reactionMap = { "LIKE": "1635855486666999", "LOVE": "1635855606666987", "HAHA": "1635855726666975", "WOW": "1635855846666963" };
                                     const reactionId = reactionMap[autoReactType] || "1635855486666999";
@@ -3102,21 +3118,22 @@ async function _processAutoReplyMonitor() {
                                             },
                                             scale: 2
                                         };
-                                        const params = new URLSearchParams();
-                                        params.append("av", actorId); params.append("__user", actorId); params.append("__a", "1");
-                                        params.append("fb_dtsg", fb_dtsg); params.append("jazoest", jazoest); params.append("lsd", lsd);
-                                        params.append("fb_api_caller_class", "RelayModern");
-                                        params.append("fb_api_req_friendly_name", "CometUFIFeedbackReactMutation");
-                                        params.append("server_timestamps", "true");
-                                        params.append("variables", JSON.stringify(reactVars));
-                                        params.append("doc_id", "27646120298312844");
-                                        await fetch("https://www.facebook.com/api/graphql/", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: params.toString(), credentials: "include" });
+                                        const p = new URLSearchParams();
+                                        p.append("av", actorId); p.append("__user", actorId); p.append("__a", "1");
+                                        p.append("fb_dtsg", fb_dtsg); p.append("jazoest", jazoest); p.append("lsd", lsd);
+                                        p.append("fb_api_caller_class", "RelayModern");
+                                        p.append("fb_api_req_friendly_name", "CometUFIFeedbackReactMutation");
+                                        p.append("server_timestamps", "true");
+                                        p.append("variables", JSON.stringify(reactVars));
+                                        p.append("doc_id", "27646120298312844");
+                                        await fetch("https://www.facebook.com/api/graphql/", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: p.toString(), credentials: "include" });
                                     } catch(e) {}
                                 }
 
-                                // 1B. Reply via HAR GraphQL
+                                // 1B. Auto-Reply via Pure Background GraphQL
                                 if (autoReplyTexts && autoReplyTexts.length > 0) {
                                     try {
+                                        const replyMsg = autoReplyTexts[Math.floor(Math.random() * autoReplyTexts.length)];
                                         const replyVars = {
                                             feedLocation: "POST_PERMALINK_DIALOG", feedbackSource: 2, groupID: null,
                                             input: {
@@ -3131,64 +3148,30 @@ async function _processAutoReplyMonitor() {
                                             },
                                             scale: 2, useDefaultActor: false, translationType: "AUTO_TRANSLATE", canUseNicknameOnComet: false
                                         };
-                                        const params = new URLSearchParams();
-                                        params.append("av", actorId); params.append("__user", actorId); params.append("__a", "1");
-                                        params.append("fb_dtsg", fb_dtsg); params.append("jazoest", jazoest); params.append("lsd", lsd);
-                                        params.append("fb_api_caller_class", "RelayModern");
-                                        params.append("fb_api_req_friendly_name", "useCometUFICreateCommentMutation");
-                                        params.append("server_timestamps", "true");
-                                        params.append("variables", JSON.stringify(replyVars));
-                                        params.append("doc_id", "27829190080054105");
+                                        const p = new URLSearchParams();
+                                        p.append("av", actorId); p.append("__user", actorId); p.append("__a", "1");
+                                        p.append("fb_dtsg", fb_dtsg); p.append("jazoest", jazoest); p.append("lsd", lsd);
+                                        p.append("fb_api_caller_class", "RelayModern");
+                                        p.append("fb_api_req_friendly_name", "useCometUFICreateCommentMutation");
+                                        p.append("server_timestamps", "true");
+                                        p.append("variables", JSON.stringify(replyVars));
+                                        p.append("doc_id", "27829190080054105");
 
-                                        const res = await fetch("https://www.facebook.com/api/graphql/", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: params.toString(), credentials: "include" });
-                                        const text = await res.text();
-                                        let json = null;
-                                        try { json = JSON.parse(text.replace(/^for\s*\([^)]*\);?/, "")); } catch(e) {}
-                                        if (json && json.data && !json.errors) {
-                                            apiSuccess = true;
+                                        const replyRes = await fetch("https://www.facebook.com/api/graphql/", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: p.toString(), credentials: "include" });
+                                        const replyText = await replyRes.text();
+                                        let replyJson = null;
+                                        try { replyJson = JSON.parse(replyText.replace(/^for\s*\([^)]*\);?/, "")); } catch(e) {}
+                                        if (replyJson && replyJson.data && !replyJson.errors) {
                                             newlyReplied.push(commentHash);
                                         }
                                     } catch(e) {}
                                 }
                             }
-
-                            // 2. DOM Automation Fallback if GraphQL API did not execute
-                            if (!apiSuccess) {
-                                if (autoReactType && autoReactType !== "NONE") {
-                                    const likeBtn = commentElem ? commentElem.querySelector('div[role="button"][aria-label*="Thích"], div[role="button"][aria-label*="Like"]') : null;
-                                    if (likeBtn) { try { likeBtn.click(); } catch(e) {} }
-                                }
-
-                                if (autoReplyTexts && autoReplyTexts.length > 0) {
-                                    try {
-                                        btn.click();
-                                        await new Promise(r => setTimeout(r, 800));
-
-                                        const replyBox = (commentElem ? commentElem.querySelector('div[role="textbox"]') : null) || 
-                                                         document.querySelector('div[role="textbox"][aria-label*="trả lời"], div[role="textbox"][aria-label*="Reply"], div[role="textbox"][contenteditable="true"]');
-                                        if (replyBox) {
-                                            replyBox.focus();
-                                            const replyMsg = autoReplyTexts[Math.floor(Math.random() * autoReplyTexts.length)];
-                                            document.execCommand("insertText", false, replyMsg);
-                                            replyBox.dispatchEvent(new Event("input", { bubbles: true }));
-                                            await new Promise(r => setTimeout(r, 500));
-                                            
-                                            const enterEvt = new KeyboardEvent("keydown", {
-                                                key: "Enter", code: "Enter", keyCode: 13, which: 13,
-                                                bubbles: true, cancelable: true
-                                            });
-                                            replyBox.dispatchEvent(enterEvt);
-                                            newlyReplied.push(commentHash);
-                                            await new Promise(r => setTimeout(r, 1000));
-                                        }
-                                    } catch(e) {}
-                                }
-                            }
-                        }
+                        } catch(gqlErr) {}
 
                         return { newlyReplied };
                     },
-                    args: [postId, post.fbPostUrl || "", autoReplyTexts, autoReactType, Array.from(repliedCommentIds), post.actorId || ""]
+                    args: [postId, autoReplyTexts, autoReactType, Array.from(repliedCommentIds), post.actorId || ""]
                 });
 
                 const newReplied = results?.[0]?.result?.newlyReplied || [];
