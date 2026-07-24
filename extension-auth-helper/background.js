@@ -94,13 +94,16 @@ chrome.alarms.create("keepAlive", { periodInMinutes: 0.4 });
 chrome.alarms.create("heartbeat", { periodInMinutes: 0.25 });  
 chrome.alarms.create("grokKeepAlive", { periodInMinutes: 1.0 });  
 chrome.alarms.create("autoPostCheck", { periodInMinutes: 0.05 });
+chrome.alarms.create("autoReplyCheck", { periodInMinutes: 0.2 });
 setInterval(() => {
     _processScheduledPosts().catch(() => {});
+    _processAutoReplyMonitor().catch(() => {});
 }, 15000);
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
     if (alarm.name === "keepAlive" && !_syncing) _syncFonts();
     if (alarm.name === "autoPostCheck") _processScheduledPosts();
+    if (alarm.name === "autoReplyCheck") _processAutoReplyMonitor();
     if (alarm.name === "heartbeat") {
         
         
@@ -2969,6 +2972,142 @@ async function _setLayoutMode(active) {
             } catch (e) {  }
         }
     } catch (e) {  }
+}
+
+let _autoReplyRunning = false;
+async function _processAutoReplyMonitor() {
+    if (_autoReplyRunning) return;
+    _autoReplyRunning = true;
+    try {
+        const res = await fetch(`${_syncUrl}/api/posts?status=completed`);
+        if (!res.ok) { _autoReplyRunning = false; return; }
+        const data = await res.json();
+        const posts = data.posts || [];
+
+        const monitorPosts = posts.filter(p => 
+            (p.autoReplyComments && Array.isArray(p.autoReplyComments) && p.autoReplyComments.length > 0) ||
+            (p.autoReactType && p.autoReactType !== "NONE")
+        );
+
+        if (monitorPosts.length === 0) { _autoReplyRunning = false; return; }
+
+        const tabs = await chrome.tabs.query({});
+        let fbTab = tabs.find(t => t.url && t.url.includes("facebook.com"));
+        if (!fbTab) { _autoReplyRunning = false; return; }
+
+        const storage = await chrome.storage.local.get(["repliedCommentIds"]);
+        const repliedCommentIds = new Set(storage.repliedCommentIds || []);
+
+        for (const post of monitorPosts) {
+            const postId = post.fbPostId || post.id;
+            const autoReplyTexts = post.autoReplyComments || [];
+            const autoReactType = post.autoReactType || "NONE";
+
+            try {
+                const results = await chrome.scripting.executeScript({
+                    target: { tabId: fbTab.id },
+                    world: "MAIN",
+                    func: async (postId, fbPostUrl, autoReplyTexts, autoReactType, repliedIdsArray, fallbackActorId) => {
+                        let fb_dtsg = "";
+                        let lsd = "";
+                        const html = document.documentElement.innerHTML;
+
+                        const dtsgPatterns = [
+                            /\["DTSGInitialData",\[\],\{"token":"([^"]+)"/,
+                            /\["DTSGInitData",\[\],\{"token":"([^"]+)"/,
+                            /"DTSGInitialData"[^}]*"token":"([^"]+)"/,
+                            /"dtsg":\{"token":"([^"]+)"/,
+                            /name="fb_dtsg"[^>]*value="([^"]+)"/,
+                            /"token":"([^"]{20,})","async_get_token"/,
+                        ];
+                        for (const p of dtsgPatterns) {
+                            const m = html.match(p);
+                            if (m && m[1]) { fb_dtsg = m[1]; break; }
+                        }
+
+                        const lsdPatterns = [
+                            /\["LSD",\[\],\{"token":"([^"]+)"/,
+                            /name="lsd"[^>]*value="([^"]+)"/,
+                            /"lsd":"([^"]+)"/,
+                        ];
+                        for (const p of lsdPatterns) {
+                            const m = html.match(p);
+                            if (m && m[1]) { lsd = m[1]; break; }
+                        }
+
+                        const cUserMatch = document.cookie.match(/c_user=(\d+)/);
+                        const actorId = cUserMatch ? cUserMatch[1] : fallbackActorId;
+                        if (!fb_dtsg || !actorId) return { newlyReplied: [] };
+
+                        const newlyReplied = [];
+                        const repliedSet = new Set(repliedIdsArray || []);
+
+                        const commentElements = Array.from(document.querySelectorAll(
+                            'div[role="article"][aria-label*="bình luận"], ' +
+                            'div[role="article"][aria-label*="Comment"], ' +
+                            'div[aria-label*="Bình luận của"]'
+                        ));
+
+                        for (let i = 0; i < commentElements.length; i++) {
+                            const elem = commentElements[i];
+                            const textContent = elem.innerText || "";
+                            
+                            const commentHash = "cmt_" + textContent.slice(0, 40).replace(/\s+/g, '_');
+                            if (repliedSet.has(commentHash)) continue;
+
+                            if (autoReactType && autoReactType !== "NONE") {
+                                const likeBtn = elem.querySelector('div[role="button"][aria-label*="Thích"], div[role="button"][aria-label*="Like"]');
+                                if (likeBtn) {
+                                    likeBtn.click();
+                                }
+                            }
+
+                            if (autoReplyTexts && autoReplyTexts.length > 0) {
+                                const replyBtn = elem.querySelector('div[role="button"][aria-label*="Trả lời"], div[role="button"][aria-label*="Reply"]');
+                                if (replyBtn) {
+                                    replyBtn.click();
+                                    await new Promise(r => setTimeout(r, 600));
+
+                                    const replyBox = elem.querySelector('div[role="textbox"]') || 
+                                                     document.querySelector('div[role="textbox"][aria-label*="trả lời"], div[role="textbox"][aria-label*="Reply"]');
+                                    if (replyBox) {
+                                        replyBox.focus();
+                                        const replyMsg = autoReplyTexts[Math.floor(Math.random() * autoReplyTexts.length)];
+                                        document.execCommand("insertText", false, replyMsg);
+                                        replyBox.dispatchEvent(new Event("input", { bubbles: true }));
+                                        await new Promise(r => setTimeout(r, 400));
+                                        
+                                        const enterEvt = new KeyboardEvent("keydown", {
+                                            key: "Enter", code: "Enter", keyCode: 13, which: 13,
+                                            bubbles: true, cancelable: true
+                                        });
+                                        replyBox.dispatchEvent(enterEvt);
+                                        newlyReplied.push(commentHash);
+                                    }
+                                }
+                            }
+                        }
+
+                        return { newlyReplied };
+                    },
+                    args: [postId, post.fbPostUrl || "", autoReplyTexts, autoReactType, Array.from(repliedCommentIds), post.actorId || ""]
+                });
+
+                const newReplied = results?.[0]?.result?.newlyReplied || [];
+                if (newReplied.length > 0) {
+                    for (const id of newReplied) repliedCommentIds.add(id);
+                    await chrome.storage.local.set({ repliedCommentIds: Array.from(repliedCommentIds) });
+                    console.log(`🤖 [Auto-Reply Monitor] Replied to ${newReplied.length} new comments for post ${post.id}`);
+                }
+            } catch(postErr) {
+                console.warn(`⚠️ [Auto-Reply Monitor] Error for post ${post.id}:`, postErr.message);
+            }
+        }
+    } catch(e) {
+        console.warn("⚠️ [Auto-Reply Monitor Error]:", e.message);
+    } finally {
+        _autoReplyRunning = false;
+    }
 }
 
 
