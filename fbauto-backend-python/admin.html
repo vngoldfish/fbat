@@ -1740,45 +1740,94 @@
       _currentCommentsPostId = null;
     }
 
+    let _currentPostCommentsCache = [];
+    let _currentPostCache = {};
+
+    async function openCommentsModal(postId) {
+      _currentCommentsPostId = postId;
+      const modal = document.getElementById('commentsModal');
+      const container = document.getElementById('commentsModalContent');
+      modal.style.display = 'flex';
+      container.innerHTML = '<div style="text-align:center; padding:40px; color:#a78bfa;"><div class="pulse-spinner"></div> Đang tải danh sách bình luận...</div>';
+
+      try {
+        const res = await fetch(`${API_BASE}/api/posts/${postId}/comments`);
+        const data = await res.json();
+        _currentPostCommentsCache = data.comments || [];
+        _currentPostCache = data.post || {};
+        renderCommentsModal(_currentPostCommentsCache, _currentPostCache);
+      } catch(e) {
+        container.innerHTML = `<div style="color:#f87171; text-align:center;">Lỗi: ${e.message}</div>`;
+      }
+    }
+
+    function closeCommentsModal() {
+      document.getElementById('commentsModal').style.display = 'none';
+      _currentCommentsPostId = null;
+    }
+
+    function filterCommentsModal(query) {
+      const q = (query || '').toLowerCase().trim();
+      const filtered = _currentPostCommentsCache.filter(c => 
+        (c.authorName || '').toLowerCase().includes(q) ||
+        (c.text || c.message || '').toLowerCase().includes(q)
+      );
+      renderCommentsModalBody(filtered, _currentPostCache);
+    }
+
     function renderCommentsModal(comments, post) {
       const container = document.getElementById('commentsModalContent');
       
       let html = `
-        <div style="background:rgba(255,255,255,0.05); padding:16px; border-radius:12px; font-size:14px; color:#e0e7ff; display:flex; justify-content:space-between; align-items:center;">
+        <div style="background:rgba(255,255,255,0.05); padding:16px; border-radius:12px; font-size:14px; color:#e0e7ff; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
           <div>
             <strong>📝 Bài viết:</strong> "${escapeHtml(post.content || '')}"
             ${post.fbPostUrl ? `<br><a href="${escapeHtml(post.fbPostUrl)}" target="_blank" style="color:#818cf8; font-size:12px;">🔗 Mở bài viết trên Facebook</a>` : ''}
           </div>
-          <button class="btn btn-xs btn-primary" onclick="openCommentsModal('${post.id}')">🔄 Tải Lại Bình Luận</button>
+          <button class="btn btn-xs btn-primary" onclick="openCommentsModal('${post.id}')">⚡ Tải Bình Luận Mới</button>
+        </div>
+
+        <div style="margin-top:10px;">
+          <input type="text" oninput="filterCommentsModal(this.value)" placeholder="🔍 Tìm kiếm bình luận theo tên khách hoặc nội dung..." style="width:100%; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); color:#fff; border-radius:10px; padding:10px 14px; font-size:13px;">
+        </div>
+
+        <div id="commentsModalList" style="display:flex; flex-direction:column; gap:12px; margin-top:12px;">
         </div>
       `;
 
+      container.innerHTML = html;
+      renderCommentsModalBody(comments, post);
+    }
+
+    function renderCommentsModalBody(comments, post) {
+      const listContainer = document.getElementById('commentsModalList');
+      if (!listContainer) return;
+
       if (comments.length === 0) {
-        html += `
+        listContainer.innerHTML = `
           <div style="text-align:center; padding:40px; color:var(--text-dim); background:rgba(0,0,0,0.2); border-radius:16px;">
-            ✨ Chưa có bình luận nào trên bài viết này.
+            ✨ Không tìm thấy bình luận nào.
           </div>
         `;
-      } else {
-        html += comments.map((c, i) => `
-          <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); padding:16px; border-radius:14px; display:flex; flex-direction:column; gap:8px;">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-              <strong style="color:#38bdf8; font-size:14px;">👤 ${escapeHtml(c.authorName || c.authorId || 'Khách hàng')}</strong>
-              <span style="font-size:11px; color:var(--text-dim);">${c.time ? new Date(c.time).toLocaleString('vi-VN') : ''}</span>
-            </div>
-            <div style="color:#fff; font-size:14px; line-height:1.4;">${escapeHtml(c.text || c.message || '')}</div>
-            
-            <div style="display:flex; gap:8px; margin-top:8px; align-items:center; flex-wrap:wrap;">
-              <input type="text" id="replyInput_${i}" placeholder="Nhập câu phản hồi đích danh..." style="flex:1; min-width:200px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); color:#fff; border-radius:8px; padding:6px 12px; font-size:13px;">
-              <button class="btn btn-xs btn-primary" onclick="sendManualReply('${escapeHtml(c.id || '')}', ${i})">💬 Phản Hồi</button>
-              <button class="btn btn-xs" style="background:#ec4899; color:#fff;" onclick="sendManualReact('${escapeHtml(c.id || '')}', 'LOVE')">❤️ Thả Tim</button>
-              <button class="btn btn-xs" style="background:linear-gradient(135deg,#6366f1,#8b5cf6); color:#fff;" title="AI tự động soạn câu trả lời chuẩn xác" onclick="sendAiReply('${escapeHtml(c.id || '')}', ${i})">🤖 AI Trả Lời</button>
-            </div>
-          </div>
-        `).join('');
+        return;
       }
 
-      container.innerHTML = html;
+      listContainer.innerHTML = comments.map((c, i) => `
+        <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); padding:16px; border-radius:14px; display:flex; flex-direction:column; gap:8px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <strong style="color:#38bdf8; font-size:14px;">👤 ${escapeHtml(c.authorName || c.authorId || 'Khách hàng')}</strong>
+            <span style="font-size:11px; color:var(--text-dim);">${c.time ? new Date(c.time).toLocaleString('vi-VN') : ''}</span>
+          </div>
+          <div style="color:#fff; font-size:14px; line-height:1.4;">${escapeHtml(c.text || c.message || '')}</div>
+          
+          <div style="display:flex; gap:8px; margin-top:8px; align-items:center; flex-wrap:wrap;">
+            <input type="text" id="replyInput_${i}" placeholder="Nhập câu phản hồi đích danh..." style="flex:1; min-width:200px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); color:#fff; border-radius:8px; padding:6px 12px; font-size:13px;">
+            <button class="btn btn-xs btn-primary" onclick="sendManualReply('${escapeHtml(c.id || '')}', ${i})">💬 Phản Hồi</button>
+            <button class="btn btn-xs" style="background:#ec4899; color:#fff;" onclick="sendManualReact('${escapeHtml(c.id || '')}', 'LOVE')">❤️ Thả Tim</button>
+            <button class="btn btn-xs" style="background:linear-gradient(135deg,#6366f1,#8b5cf6); color:#fff;" title="AI tự động soạn câu trả lời chuẩn xác" onclick="sendAiReply('${escapeHtml(c.id || '')}', ${i})">🤖 AI Trả Lời</button>
+          </div>
+        </div>
+      `).join('');
     }
 
     async function sendManualReply(commentId, index) {

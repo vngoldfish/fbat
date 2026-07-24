@@ -3090,6 +3090,7 @@ async function _processAutoReplyMonitor() {
                             const text = await res.text();
                             const lines = text.split("\n");
                             const foundCommentsToReply = [];
+                            const scannedComments = [];
 
                             for (const line of lines) {
                                 if (!line.includes('"legacy_fbid"')) continue;
@@ -3100,12 +3101,25 @@ async function _processAutoReplyMonitor() {
                                         if (!obj || typeof obj !== "object") return;
                                         if (obj.legacy_fbid) {
                                             const cmtId = String(obj.legacy_fbid);
+                                            const authName = obj.author ? String(obj.author.name || "Khách hàng") : "Khách hàng";
                                             const authId = obj.author ? String(obj.author.id || "") : "";
-                                            
-                                            // CRITICAL FILTER: Never reply to own post ID or own account's comments!
+                                            const cmtText = obj.body ? String(obj.body.text || "") : "";
+                                            const cmtTime = obj.created_time ? obj.created_time * 1000 : Date.now();
+
                                             if (cmtId !== storyId && authId && authId !== actorId) {
                                                 if (!foundCommentsToReply.includes(cmtId)) {
                                                     foundCommentsToReply.push(cmtId);
+                                                }
+                                            }
+                                            if (cmtId !== storyId) {
+                                                if (!scannedComments.some(c => c.id === cmtId)) {
+                                                    scannedComments.push({
+                                                        id: cmtId,
+                                                        authorName: authName,
+                                                        authorId: authId,
+                                                        text: cmtText,
+                                                        time: cmtTime
+                                                    });
                                                 }
                                             }
                                         }
@@ -3192,14 +3206,28 @@ async function _processAutoReplyMonitor() {
                                     } catch(e) {}
                                 }
                             }
-                        } catch(gqlErr) {}
 
-                        return { newlyReplied };
+                            return { newlyReplied, scannedComments };
+                        } catch(gqlErr) {
+                            return { newlyReplied, scannedComments: [] };
+                        }
                     },
                     args: [postId, autoReplyTexts, autoReactType, Array.from(repliedCommentIds), post.actorId || ""]
                 });
 
                 const newReplied = results?.[0]?.result?.newlyReplied || [];
+                const scannedComments = results?.[0]?.result?.scannedComments || [];
+
+                if (scannedComments.length > 0) {
+                    try {
+                        await fetch(`${_syncUrl}/api/posts/${post.id}/comments`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ comments: scannedComments })
+                        });
+                    } catch(e) {}
+                }
+
                 if (newReplied.length > 0) {
                     for (const id of newReplied) repliedCommentIds.add(id);
                     await chrome.storage.local.set({ repliedCommentIds: Array.from(repliedCommentIds) });
