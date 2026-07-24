@@ -2109,6 +2109,12 @@
           showToast('✅ Đã lưu cài đặt tùy chọn hệ thống thành công!', 'success');
         } else {
           showToast('❌ Lưu cài đặt thất bại', 'error');
+        }
+      } catch(e) {
+        showToast('❌ Lỗi khi lưu cài đặt: ' + e.message, 'error');
+      }
+    }
+
     // =========================================================================
     // FEATURE TEST SUITE JS FUNCTIONS
     // =========================================================================
