@@ -2298,62 +2298,93 @@ async function _executePostItem(post) {
                                     const actorId = cUserMatch ? cUserMatch[1] : fallbackActorId;
 
                                     if (!fb_dtsg || !actorId || !postId) {
-                                        return { success: false, error: "Missing tokens or postId", fb_dtsg: !!fb_dtsg, actorId: !!actorId, postId: !!postId };
+                                        return { success: false, error: "Missing tokens (dtsg:" + !!fb_dtsg + ", actorId:" + !!actorId + ", postId:" + !!postId + ")" };
                                     }
 
-                                    const feedbackId = btoa("feedback:" + postId);
+                                    const feedbackCandidates = [
+                                        btoa("feedback:" + postId),
+                                        btoa("Feedback:" + postId)
+                                    ];
+
+                                    if (String(postId).startsWith("pfbid")) {
+                                        const numMatch = html.match(new RegExp(`"${postId}"[^}]*?"legacy_story_id":"(\\d+)"`)) ||
+                                                         html.match(new RegExp(`"${postId}"[^}]*?"id":"(\\d+)"`)) ||
+                                                         html.match(/"legacy_story_id"\s*:\s*"(\d+)"/);
+                                        if (numMatch && numMatch[1]) {
+                                            feedbackCandidates.unshift(btoa("feedback:" + numMatch[1]));
+                                        }
+                                    }
+
                                     let successCount = 0;
                                     const errors = [];
 
                                     for (const commentText of comments) {
                                         if (!commentText || !commentText.trim()) continue;
-                                        try {
-                                            const vars = {
-                                                input: {
-                                                    feedback_id: feedbackId,
-                                                    message: { text: commentText.trim() },
-                                                    actor_id: actorId,
-                                                    client_mutation_id: String(Date.now())
-                                                }
-                                            };
-                                            const params = new URLSearchParams();
-                                            params.append("av", actorId);
-                                            params.append("__user", actorId);
-                                            params.append("__a", "1");
-                                            params.append("fb_dtsg", fb_dtsg);
-                                            params.append("lsd", lsd);
-                                            params.append("fb_api_caller_class", "RelayModern");
-                                            params.append("fb_api_req_friendly_name", "CometCommentCreateMutation");
-                                            params.append("variables", JSON.stringify(vars));
-                                            params.append("doc_id", "5384620808298758");
+                                        let commentSuccess = false;
 
-                                            const res = await fetch("https://www.facebook.com/api/graphql/", {
-                                                method: "POST",
-                                                headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                                                body: params.toString(),
-                                                credentials: "include"
-                                            });
-                                            const text = await res.text();
-                                            const json = JSON.parse(text.replace("for (;;);", ""));
-                                            if (json.data && (json.data.comment_create || json.data.comment)) {
-                                                successCount++;
-                                            } else if (json.errors) {
-                                                errors.push(json.errors[0]?.message || "GraphQL error");
-                                            } else {
-                                                successCount++;
+                                        for (const fbIdCandidate of feedbackCandidates) {
+                                            try {
+                                                const vars = {
+                                                    input: {
+                                                        feedback_id: fbIdCandidate,
+                                                        message: { text: commentText.trim() },
+                                                        actor_id: actorId,
+                                                        client_mutation_id: String(Date.now())
+                                                    }
+                                                };
+                                                const params = new URLSearchParams();
+                                                params.append("av", actorId);
+                                                params.append("__user", actorId);
+                                                params.append("__a", "1");
+                                                params.append("fb_dtsg", fb_dtsg);
+                                                params.append("lsd", lsd);
+                                                params.append("fb_api_caller_class", "RelayModern");
+                                                params.append("fb_api_req_friendly_name", "CometCommentCreateMutation");
+                                                params.append("variables", JSON.stringify(vars));
+                                                params.append("doc_id", "5384620808298758");
+
+                                                const res = await fetch("https://www.facebook.com/api/graphql/", {
+                                                    method: "POST",
+                                                    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                                                    body: params.toString(),
+                                                    credentials: "include"
+                                                });
+                                                const text = await res.text();
+                                                const json = JSON.parse(text.replace("for (;;);", ""));
+                                                if (json.data && (json.data.comment_create || json.data.comment)) {
+                                                    commentSuccess = true;
+                                                    break;
+                                                } else if (json.errors) {
+                                                    errors.push(json.errors[0]?.message || "GraphQL error");
+                                                } else {
+                                                    commentSuccess = true;
+                                                    break;
+                                                }
+                                            } catch(e) {
+                                                errors.push(e.message);
                                             }
-                                            await new Promise(r => setTimeout(r, 1200));
-                                        } catch(e) {
-                                            errors.push(e.message);
                                         }
+
+                                        if (commentSuccess) successCount++;
+                                        await new Promise(r => setTimeout(r, 1200));
                                     }
+
                                     return { success: successCount > 0, successCount, total: comments.length, errors };
                                 },
                                 args: [pid, payload.seedingComments, fallbackActorId]
                             });
-                            console.log("💬 [Seeding Comments Result]:", seedingResults?.[0]?.result);
+
+                            const seedResult = seedingResults?.[0]?.result;
+                            console.log("💬 [Seeding Comments Result]:", seedResult);
+                            if (seedResult && seedResult.success) {
+                                await updateStep(`✅ 💬 Đã gửi thành công ${seedResult.successCount}/${seedResult.total} bình luận seeding!`);
+                            } else {
+                                const seedErrMsg = seedResult?.error || (seedResult?.errors && seedResult.errors[0]) || "Không tìm thấy token/post ID";
+                                await updateStep(`⚠️ 💬 Gửi bình luận seeding không thành công: ${seedErrMsg}`);
+                            }
                         } catch(e) {
                             console.warn("⚠️ [Seeding Comments Error]:", e.message);
+                            await updateStep(`⚠️ 💬 Lỗi seeding: ${e.message}`);
                         }
                     }
                     
