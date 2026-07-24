@@ -831,6 +831,17 @@
                 <input type="text" id="postTargetId" class="form-control" style="flex:2;" placeholder="ID Fanpage / Group (Tùy chọn)">
               </div>
               <textarea id="postSeedingComments" class="form-control" rows="2" placeholder="💬 Bình luận seeding tự động (Mỗi câu 1 dòng)..."></textarea>
+              <textarea id="postAutoReplyText" class="form-control" rows="2" placeholder="🤖 Tự động trả lời khi có comment mới (Mỗi câu 1 dòng)..." style="margin-top:8px;"></textarea>
+              <div style="display:flex; gap:12px; margin-top:8px; align-items:center;">
+                <span style="font-size:12px; font-weight:600; color:var(--text-dim); white-space:nowrap;">❤️ Tự động thả cảm xúc:</span>
+                <select id="postAutoReactType" class="form-control" style="flex:1;">
+                  <option value="NONE">❌ Không thả</option>
+                  <option value="LIKE">👍 Thích (Like)</option>
+                  <option value="LOVE" selected>❤️ Thả Tim (Love)</option>
+                  <option value="HAHA">😆 Haha</option>
+                  <option value="WOW">😮 Wow</option>
+                </select>
+              </div>
             </div>
 
             <!-- SUB-PANEL 4: Schedule Timer & Submit -->
@@ -1352,6 +1363,10 @@
       const seedingRaw = document.getElementById('postSeedingComments').value || '';
       const seedingComments = seedingRaw.split('\n').map(s => s.trim()).filter(Boolean);
 
+      const autoReplyRaw = document.getElementById('postAutoReplyText')?.value || '';
+      const autoReplyComments = autoReplyRaw.split('\n').map(s => s.trim()).filter(Boolean);
+      const autoReactType = document.getElementById('postAutoReactType')?.value || 'NONE';
+
       if (!content && !mediaUrl && !_adminMediaData) {
         showToast('⚠️ Vui lòng nhập nội dung, chọn file, hoặc URL Media!', 'error');
         submitBtn.innerHTML = originalText;
@@ -1360,7 +1375,7 @@
       }
 
       const postData = {
-        postType, content, mediaUrl, targetType, targetId, seedingComments, accessToken, scheduledTime, repeatIntervalMinutes, source: 'web_admin'
+        postType, content, mediaUrl, targetType, targetId, seedingComments, autoReplyComments, autoReactType, accessToken, scheduledTime, repeatIntervalMinutes, source: 'web_admin'
       };
 
       if (_adminMediaData) {

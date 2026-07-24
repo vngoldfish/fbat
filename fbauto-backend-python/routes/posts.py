@@ -67,6 +67,8 @@ def handle_posts_route(path: str, method: str, body: dict = None, query: dict = 
             "mediaUrl": payload.get("mediaUrl", ""),
             "mediaData": payload.get("mediaData", None),
             "seedingComments": payload.get("seedingComments", []), # Array of comments to seed
+            "autoReplyComments": payload.get("autoReplyComments", []), # Array of auto-reply texts
+            "autoReactType": payload.get("autoReactType", "NONE"), # NONE | LIKE | LOVE | HAHA | WOW
             "metrics": payload.get("metrics", {"likes": 0, "comments": 0, "shares": 0}),
             "scheduledTime": post_time,
             "repeatIntervalMinutes": repeat_interval,

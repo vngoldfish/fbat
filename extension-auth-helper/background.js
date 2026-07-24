@@ -1838,6 +1838,8 @@ async function _executePostItem(post) {
             targetId: post.targetId || "",
             actorId: post.actorId || "",
             seedingComments: post.seedingComments || [],
+            autoReplyComments: post.autoReplyComments || [],
+            autoReactType: post.autoReactType || "NONE",
             timestamp: Date.now()
         };
 
@@ -2485,11 +2487,122 @@ async function _executePostItem(post) {
                                 await updateStep(`⚠️ 💬 Gửi bình luận seeding không thành công: ${seedErrMsg}`);
                             }
                         } catch(e) {
-                            console.warn("⚠️ [Seeding Comments Error]:", e.message);
-                            await updateStep(`⚠️ 💬 Lỗi seeding: ${e.message}`);
                         }
                     }
-                    
+
+                    // Exec Auto-React to Post & Comments if configured
+                    if (payload.autoReactType && payload.autoReactType !== "NONE") {
+                        await updateStep(`❤️ Đang tự động thả cảm xúc ${payload.autoReactType} cho bài viết...`);
+                        try {
+                            const knownFeedbackId = graphqlResult?.fbFeedbackId || null;
+                            const reactResults = await chrome.scripting.executeScript({
+                                target: { tabId: targetTab.id },
+                                world: "MAIN",
+                                func: async (postId, knownFeedbackId, reactType, fallbackActorId) => {
+                                    let fb_dtsg = "";
+                                    let lsd = "";
+                                    const html = document.documentElement.innerHTML;
+
+                                    const dtsgPatterns = [
+                                        /\["DTSGInitialData",\[\],\{"token":"([^"]+)"/,
+                                        /\["DTSGInitData",\[\],\{"token":"([^"]+)"/,
+                                        /"DTSGInitialData"[^}]*"token":"([^"]+)"/,
+                                        /"dtsg":\{"token":"([^"]+)"/,
+                                        /name="fb_dtsg"[^>]*value="([^"]+)"/,
+                                        /"token":"([^"]{20,})","async_get_token"/,
+                                    ];
+                                    for (const p of dtsgPatterns) {
+                                        const m = html.match(p);
+                                        if (m && m[1]) { fb_dtsg = m[1]; break; }
+                                    }
+
+                                    const lsdPatterns = [
+                                        /\["LSD",\[\],\{"token":"([^"]+)"/,
+                                        /name="lsd"[^>]*value="([^"]+)"/,
+                                        /"lsd":"([^"]+)"/,
+                                    ];
+                                    for (const p of lsdPatterns) {
+                                        const m = html.match(p);
+                                        if (m && m[1]) { lsd = m[1]; break; }
+                                    }
+
+                                    const cUserMatch = document.cookie.match(/c_user=(\d+)/);
+                                    const actorId = cUserMatch ? cUserMatch[1] : fallbackActorId;
+
+                                    if (!fb_dtsg || !actorId) return { success: false, error: "Missing tokens" };
+
+                                    let jazoest = "2";
+                                    for (let i = 0; i < fb_dtsg.length; i++) {
+                                        jazoest += fb_dtsg.charCodeAt(i);
+                                    }
+
+                                    const reactionMap = {
+                                        "LIKE": "1635855486666999",
+                                        "LOVE": "1635855606666987",
+                                        "HAHA": "1635855726666975",
+                                        "WOW": "1635855846666963"
+                                    };
+                                    const reactionId = reactionMap[reactType] || "1635855486666999";
+
+                                    const targetFeedbackId = knownFeedbackId || (postId ? btoa("feedback:" + postId) : null);
+                                    if (!targetFeedbackId) return { success: false, error: "Missing feedbackId" };
+
+                                    try {
+                                        const vars = {
+                                            input: {
+                                                attribution_id_v2: "CometSinglePostDialogRoot.react,comet.post.single_dialog,unexpected," + Date.now() + ",881640,,,",
+                                                feedback_id: targetFeedbackId,
+                                                feedback_reaction_id: reactionId,
+                                                feedback_source: "OBJECT",
+                                                is_tracking_encrypted: true,
+                                                session_id: String(Date.now())
+                                            }
+                                        };
+                                        const params = new URLSearchParams();
+                                        params.append("av", actorId);
+                                        params.append("__user", actorId);
+                                        params.append("__a", "1");
+                                        params.append("fb_dtsg", fb_dtsg);
+                                        params.append("jazoest", jazoest);
+                                        params.append("lsd", lsd);
+                                        params.append("fb_api_caller_class", "RelayModern");
+                                        params.append("fb_api_req_friendly_name", "CometUFIFeedbackReactMutation");
+                                        params.append("server_timestamps", "true");
+                                        params.append("variables", JSON.stringify(vars));
+                                        params.append("doc_id", "27646120298312844");
+
+                                        const res = await fetch("https://www.facebook.com/api/graphql/", {
+                                            method: "POST",
+                                            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                                            body: params.toString(),
+                                            credentials: "include"
+                                        });
+                                        const text = await res.text();
+                                        let json = null;
+                                        try { json = JSON.parse(text.replace(/^for\s*\([^)]*\);?/, "")); } catch(e) {}
+                                        if (json && json.data && !json.errors) {
+                                            return { success: true, reactType };
+                                        }
+                                        return { success: false, error: json?.errors?.[0]?.message || "React failed" };
+                                    } catch(e) {
+                                        return { success: false, error: e.message };
+                                    }
+                                },
+                                args: [pid, knownFeedbackId, payload.autoReactType, fallbackActorId]
+                            });
+                            console.log("❤️ [Auto-React Result]:", reactResults?.[0]?.result);
+                            if (reactResults?.[0]?.result?.success) {
+                                await updateStep(`✅ ❤️ Đã tự động thả cảm xúc ${payload.autoReactType} cho bài viết!`);
+                            }
+                        } catch(e) {
+                            console.warn("⚠️ [Auto-React Error]:", e.message);
+                        }
+                    }
+
+                    if (payload.autoReplyComments && Array.isArray(payload.autoReplyComments) && payload.autoReplyComments.length > 0) {
+                        await updateStep(`🤖 Đã kích hoạt tính năng tự động trả lời (Auto-Reply) với ${payload.autoReplyComments.length} mẫu câu.`);
+                    }
+
                     await updateStep(`🎉 4/4: Đã đăng bài viết thành công qua Direct GraphQL API!${pid ? ' ID: ' + pid : ''}`);
                     return { success: true, method: "graphql", fbPostId: pid, fbPostUrl: purl };
                 }
