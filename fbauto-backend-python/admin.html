@@ -1162,7 +1162,7 @@
         const relativeTime = p.scheduledTime ? timeAgo(p.scheduledTime) : '';
 
         return `
-        <div class="list-card" style="border-color: ${borderColor}; ${p.status === 'in_progress' ? 'box-shadow: 0 0 20px rgba(59,130,246,0.2);' : ''}">
+        <div class="list-card" data-id="${safeId}" data-status="${p.status || ''}" data-step="${escapeHtml(p.progressStep || '')}" style="border-color: ${borderColor}; ${p.status === 'in_progress' ? 'box-shadow: 0 0 20px rgba(59,130,246,0.2);' : ''}">
           <div style="display:flex; justify-content:space-between; align-items:center;">
             <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
               <span class="badge" style="background:rgba(99,102,241,0.2); color:#818cf8;">${getTypeBadge(p.postType)}</span>
@@ -1213,8 +1213,6 @@
 
           ${p.lastError && p.status !== 'completed' ? `<div style="font-size:12px; color:#f87171; margin-top:10px; background:rgba(239,68,68,0.1); padding:10px 14px; border-radius:12px; border:1px solid rgba(239,68,68,0.3);">⚠️ Lỗi: ${escapeHtml(p.lastError)}</div>` : ''}
 
-
-
           <div style="display:flex; justify-content:space-between; align-items:center; margin-top:16px; padding-top:12px; border-top:1px solid var(--border-color);">
             <span style="font-size:11px; color:var(--text-dim);">
               ID: ${displayId} ${p.fbPostId ? `• FB: <strong style="color:#34d399;">${escapeHtml(p.fbPostId)}</strong>` : ''}
@@ -1234,6 +1232,65 @@
       }
     }
 
+    function updateSmartList(container, items, emptyHtml) {
+      if (!container) return;
+      if (!items || items.length === 0) {
+        container.innerHTML = emptyHtml;
+        return;
+      }
+
+      if (container.firstElementChild && !container.firstElementChild.classList.contains('list-card')) {
+        container.innerHTML = '';
+      }
+
+      const existingMap = new Map();
+      Array.from(container.children).forEach(child => {
+        const id = child.getAttribute('data-id');
+        if (id) existingMap.set(id, child);
+      });
+
+      const itemIds = new Set(items.map(p => String(p.id)));
+
+      existingMap.forEach((child, id) => {
+        if (!itemIds.has(id)) {
+          child.remove();
+          existingMap.delete(id);
+        }
+      });
+
+      items.forEach((p, index) => {
+        const safeId = String(p.id);
+        const existingNode = existingMap.get(safeId);
+        const newCardHtml = renderPostCard(p);
+
+        if (existingNode) {
+          const curStatus = existingNode.getAttribute('data-status');
+          const curStep = existingNode.getAttribute('data-step');
+          const newStatus = p.status || '';
+          const newStep = p.progressStep || '';
+
+          if (curStatus !== newStatus || curStep !== newStep) {
+            const temp = document.createElement('div');
+            temp.innerHTML = newCardHtml;
+            const newChild = temp.firstElementChild;
+            container.replaceChild(newChild, existingNode);
+            existingMap.set(safeId, newChild);
+          }
+        } else {
+          const temp = document.createElement('div');
+          temp.innerHTML = newCardHtml;
+          const newChild = temp.firstElementChild;
+          const refNode = container.children[index] || null;
+          if (refNode) {
+            container.insertBefore(newChild, refNode);
+          } else {
+            container.appendChild(newChild);
+          }
+          existingMap.set(safeId, newChild);
+        }
+      });
+    }
+
     function renderPosts(posts) {
       const pendingList = posts.filter(p => p.status !== 'completed');
       const completedList = posts.filter(p => p.status === 'completed');
@@ -1246,11 +1303,7 @@
 
       // Render Tab 1
       const pendingContainer = document.getElementById('postsList');
-      if (pendingList.length === 0) {
-        pendingContainer.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-dim); background:rgba(0,0,0,0.2); border-radius:16px;">✨ Không có bài đăng nào đang chờ.</div>';
-      } else {
-        pendingContainer.innerHTML = pendingList.map(renderPostCard).join('');
-      }
+      updateSmartList(pendingContainer, pendingList, '<div style="text-align: center; padding: 40px; color: var(--text-dim); background:rgba(0,0,0,0.2); border-radius:16px;">✨ Không có bài đăng nào đang chờ.</div>');
 
       // Render Tab 2
       const searchQuery = (document.getElementById('searchCompleted')?.value || '').toLowerCase().trim();
@@ -1270,11 +1323,7 @@
       }
 
       const completedContainer = document.getElementById('completedList');
-      if (targetCompletedList.length === 0) {
-        completedContainer.innerHTML = `<div style="text-align: center; padding: 40px; color: var(--text-dim); background:rgba(0,0,0,0.2); border-radius:16px;">${searchQuery ? 'Không tìm thấy kết quả.' : 'Chưa có bài viết nào.'}</div>`;
-      } else {
-        completedContainer.innerHTML = targetCompletedList.map(renderPostCard).join('');
-      }
+      updateSmartList(completedContainer, targetCompletedList, `<div style="text-align: center; padding: 40px; color: var(--text-dim); background:rgba(0,0,0,0.2); border-radius:16px;">${searchQuery ? 'Không tìm thấy kết quả.' : 'Chưa có bài viết nào.'}</div>`);
     }
 
     async function handleAddPost(e) {
