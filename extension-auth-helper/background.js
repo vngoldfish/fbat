@@ -3049,40 +3049,43 @@ async function _processAutoReplyMonitor() {
                         const newlyReplied = [];
                         const repliedSet = new Set(repliedIdsArray || []);
 
-                        const commentElements = Array.from(document.querySelectorAll(
-                            'div[role="article"][aria-label*="bình luận"], ' +
-                            'div[role="article"][aria-label*="Comment"], ' +
-                            'div[aria-label*="Bình luận của"]'
-                        ));
+                        // Find all "Reply" / "Trả lời" buttons on screen dynamically
+                        const allButtons = Array.from(document.querySelectorAll('div[role="button"], span[role="button"], a[role="button"]'));
+                        const replyBtns = allButtons.filter(b => {
+                            const txt = (b.innerText || b.getAttribute('aria-label') || '').toLowerCase().trim();
+                            return (txt === 'trả lời' || txt === 'reply' || txt.startsWith('trả lời') || txt.startsWith('reply')) && !b.disabled;
+                        });
 
-                        for (let i = 0; i < commentElements.length; i++) {
-                            const elem = commentElements[i];
-                            const textContent = elem.innerText || "";
+                        for (let i = 0; i < replyBtns.length; i++) {
+                            const btn = replyBtns[i];
+                            const commentElem = btn.closest('div[role="article"]') || btn.closest('li') || btn.parentElement?.parentElement?.parentElement;
+                            const textContent = (commentElem ? commentElem.innerText : btn.parentElement?.innerText) || "";
                             
-                            const commentHash = "cmt_" + textContent.slice(0, 40).replace(/\s+/g, '_');
+                            const commentHash = "cmt_" + textContent.slice(0, 50).replace(/\s+/g, '_');
                             if (repliedSet.has(commentHash)) continue;
 
+                            // Auto-React to comment if configured
                             if (autoReactType && autoReactType !== "NONE") {
-                                const likeBtn = elem.querySelector('div[role="button"][aria-label*="Thích"], div[role="button"][aria-label*="Like"]');
+                                const likeBtn = commentElem ? commentElem.querySelector('div[role="button"][aria-label*="Thích"], div[role="button"][aria-label*="Like"]') : null;
                                 if (likeBtn) {
-                                    likeBtn.click();
+                                    try { likeBtn.click(); } catch(e) {}
                                 }
                             }
 
+                            // Auto-Reply to comment if configured
                             if (autoReplyTexts && autoReplyTexts.length > 0) {
-                                const replyBtn = elem.querySelector('div[role="button"][aria-label*="Trả lời"], div[role="button"][aria-label*="Reply"]');
-                                if (replyBtn) {
-                                    replyBtn.click();
-                                    await new Promise(r => setTimeout(r, 600));
+                                try {
+                                    btn.click();
+                                    await new Promise(r => setTimeout(r, 800));
 
-                                    const replyBox = elem.querySelector('div[role="textbox"]') || 
-                                                     document.querySelector('div[role="textbox"][aria-label*="trả lời"], div[role="textbox"][aria-label*="Reply"]');
+                                    const replyBox = (commentElem ? commentElem.querySelector('div[role="textbox"]') : null) || 
+                                                     document.querySelector('div[role="textbox"][aria-label*="trả lời"], div[role="textbox"][aria-label*="Reply"], div[role="textbox"][contenteditable="true"]');
                                     if (replyBox) {
                                         replyBox.focus();
                                         const replyMsg = autoReplyTexts[Math.floor(Math.random() * autoReplyTexts.length)];
                                         document.execCommand("insertText", false, replyMsg);
                                         replyBox.dispatchEvent(new Event("input", { bubbles: true }));
-                                        await new Promise(r => setTimeout(r, 400));
+                                        await new Promise(r => setTimeout(r, 500));
                                         
                                         const enterEvt = new KeyboardEvent("keydown", {
                                             key: "Enter", code: "Enter", keyCode: 13, which: 13,
@@ -3090,8 +3093,9 @@ async function _processAutoReplyMonitor() {
                                         });
                                         replyBox.dispatchEvent(enterEvt);
                                         newlyReplied.push(commentHash);
+                                        await new Promise(r => setTimeout(r, 1000));
                                     }
-                                }
+                                } catch(e) {}
                             }
                         }
 
