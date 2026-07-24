@@ -1273,8 +1273,12 @@
             const temp = document.createElement('div');
             temp.innerHTML = newCardHtml;
             const newChild = temp.firstElementChild;
-            container.replaceChild(newChild, existingNode);
-            existingMap.set(safeId, newChild);
+            
+            existingNode.innerHTML = newChild.innerHTML;
+            existingNode.setAttribute('data-status', newStatus);
+            existingNode.setAttribute('data-step', newStep);
+            existingNode.style.borderColor = newChild.style.borderColor;
+            existingNode.style.boxShadow = newChild.style.boxShadow || '';
           }
         } else {
           const temp = document.createElement('div');
