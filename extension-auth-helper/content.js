@@ -1,7 +1,24 @@
 
 
 (() => {
-    
+    // Suppress Facebook "Leave site / Changes you made may not be saved" prompts
+    try {
+        window.onbeforeunload = null;
+        window.onpagehide = null;
+        const _origAddEvt = window.addEventListener;
+        window.addEventListener = function(type, listener, options) {
+            if (type === 'beforeunload' || type === 'pagehide') return;
+            return _origAddEvt.call(this, type, listener, options);
+        };
+        window.addEventListener('beforeunload', (e) => {
+            try {
+                e.stopImmediatePropagation();
+                e.preventDefault();
+                delete e['returnValue'];
+            } catch(err) {}
+        }, true);
+    } catch(e) {}
+
     if (document.getElementById("glabs-fab")) return;
 
     let iconUrl, popupUrl;

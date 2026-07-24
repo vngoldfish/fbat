@@ -3007,6 +3007,10 @@ async function _processAutoReplyMonitor() {
                     target: { tabId: fbTab.id },
                     world: "MAIN",
                     func: async (postId, autoReplyTexts, autoReactType, repliedIdsArray, fallbackActorId) => {
+                        try {
+                            window.onbeforeunload = null;
+                            window.onpagehide = null;
+                        } catch(e) {}
                         let fb_dtsg = "";
                         let lsd = "";
                         const html = document.documentElement.innerHTML;
