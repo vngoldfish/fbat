@@ -70,6 +70,7 @@ def handle_posts_route(path: str, method: str, body: dict = None, query: dict = 
             "metrics": payload.get("metrics", {"likes": 0, "comments": 0, "shares": 0}),
             "scheduledTime": post_time,
             "repeatIntervalMinutes": repeat_interval,
+            "source": payload.get("source", "api"),
             "status": "pending",
             "retryCount": 0,
             "maxRetries": 3,
