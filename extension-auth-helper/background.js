@@ -2301,9 +2301,17 @@ async function _executePostItem(post) {
                                         return { success: false, error: "Missing tokens (dtsg:" + !!fb_dtsg + ", actorId:" + !!actorId + ", postId:" + !!postId + ")" };
                                     }
 
+                                    // Calculate mandatory jazoest parameter for Facebook CSRF validation
+                                    let jazoest = "2";
+                                    for (let i = 0; i < fb_dtsg.length; i++) {
+                                        jazoest += fb_dtsg.charCodeAt(i);
+                                    }
+
                                     const feedbackCandidates = [
                                         btoa("feedback:" + postId),
-                                        btoa("Feedback:" + postId)
+                                        btoa("Feedback:" + postId),
+                                        btoa("feedback:" + actorId + "_" + postId),
+                                        btoa("Feedback:" + actorId + "_" + postId)
                                     ];
 
                                     if (String(postId).startsWith("pfbid")) {
@@ -2312,9 +2320,11 @@ async function _executePostItem(post) {
                                                          html.match(/"legacy_story_id"\s*:\s*"(\d+)"/);
                                         if (numMatch && numMatch[1]) {
                                             feedbackCandidates.unshift(btoa("feedback:" + numMatch[1]));
+                                            feedbackCandidates.unshift(btoa("Feedback:" + numMatch[1]));
                                         }
                                     }
 
+                                    const docIds = ["5384620808298758", "5765399230165702", "5515286528574762", "7181675201948512", "6472288339498263"];
                                     let successCount = 0;
                                     const errors = [];
 
@@ -2323,45 +2333,48 @@ async function _executePostItem(post) {
                                         let commentSuccess = false;
 
                                         for (const fbIdCandidate of feedbackCandidates) {
-                                            try {
-                                                const vars = {
-                                                    input: {
-                                                        feedback_id: fbIdCandidate,
-                                                        message: { text: commentText.trim() },
-                                                        actor_id: actorId,
-                                                        client_mutation_id: String(Date.now())
-                                                    }
-                                                };
-                                                const params = new URLSearchParams();
-                                                params.append("av", actorId);
-                                                params.append("__user", actorId);
-                                                params.append("__a", "1");
-                                                params.append("fb_dtsg", fb_dtsg);
-                                                params.append("lsd", lsd);
-                                                params.append("fb_api_caller_class", "RelayModern");
-                                                params.append("fb_api_req_friendly_name", "CometCommentCreateMutation");
-                                                params.append("variables", JSON.stringify(vars));
-                                                params.append("doc_id", "5384620808298758");
+                                            if (commentSuccess) break;
+                                            for (const docId of docIds) {
+                                                try {
+                                                    const vars = {
+                                                        input: {
+                                                            feedback_id: fbIdCandidate,
+                                                            message: { text: commentText.trim() },
+                                                            actor_id: actorId,
+                                                            client_mutation_id: String(Date.now())
+                                                        }
+                                                    };
+                                                    const params = new URLSearchParams();
+                                                    params.append("av", actorId);
+                                                    params.append("__user", actorId);
+                                                    params.append("__a", "1");
+                                                    params.append("fb_dtsg", fb_dtsg);
+                                                    params.append("jazoest", jazoest);
+                                                    params.append("lsd", lsd);
+                                                    params.append("fb_api_caller_class", "RelayModern");
+                                                    params.append("fb_api_req_friendly_name", "CometCommentCreateMutation");
+                                                    params.append("variables", JSON.stringify(vars));
+                                                    params.append("doc_id", docId);
 
-                                                const res = await fetch("https://www.facebook.com/api/graphql/", {
-                                                    method: "POST",
-                                                    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                                                    body: params.toString(),
-                                                    credentials: "include"
-                                                });
-                                                const text = await res.text();
-                                                const json = JSON.parse(text.replace("for (;;);", ""));
-                                                if (json.data && (json.data.comment_create || json.data.comment)) {
-                                                    commentSuccess = true;
-                                                    break;
-                                                } else if (json.errors) {
-                                                    errors.push(json.errors[0]?.message || "GraphQL error");
-                                                } else {
-                                                    commentSuccess = true;
-                                                    break;
+                                                    const res = await fetch("https://www.facebook.com/api/graphql/", {
+                                                        method: "POST",
+                                                        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                                                        body: params.toString(),
+                                                        credentials: "include"
+                                                    });
+                                                    const text = await res.text();
+                                                    let json = null;
+                                                    try { json = JSON.parse(text.replace(/^for\s*\([^)]*\);?/, "")); } catch(e) {}
+
+                                                    if (json && json.data && !json.errors) {
+                                                        commentSuccess = true;
+                                                        break;
+                                                    } else if (json && json.errors && json.errors.length) {
+                                                        errors.push(`doc ${docId}: ${json.errors[0].message}`);
+                                                    }
+                                                } catch(e) {
+                                                    errors.push(e.message);
                                                 }
-                                            } catch(e) {
-                                                errors.push(e.message);
                                             }
                                         }
 
