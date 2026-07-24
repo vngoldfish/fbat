@@ -118,5 +118,40 @@ def handle_posts_route(path: str, method: str, body: dict = None, query: dict = 
             return 200, {"success": True, "post": updated}
         return 404, {"error": "Post not found"}
 
+    # GET /api/posts/<id>/comments
+    if path.startswith("/api/posts/") and path.endswith("/comments") and method == "GET":
+        parts = [p for p in path.split('/') if p]
+        post_id = parts[2] if len(parts) > 2 else ""
+        posts = database.get_collection("posts")
+        found = next((p for p in posts if p.get("id") == post_id), None)
+        if found:
+            return 200, {"success": True, "comments": found.get("comments", []), "post": found}
+        return 404, {"error": "Post not found"}
+
+    # POST /api/posts/<id>/comments -> Sync or add comment
+    if path.startswith("/api/posts/") and path.endswith("/comments") and method == "POST":
+        parts = [p for p in path.split('/') if p]
+        post_id = parts[2] if len(parts) > 2 else ""
+        posts = database.get_collection("posts")
+        found = next((p for p in posts if p.get("id") == post_id), None)
+        if not found:
+            return 404, {"error": "Post not found"}
+
+        payload = body or {}
+        existing_comments = found.get("comments", [])
+        
+        if "comments" in payload and isinstance(payload["comments"], list):
+            # Sync full comments list
+            updated = database.update_item("posts", post_id, {"comments": payload["comments"]})
+            return 200, {"success": True, "comments": payload["comments"]}
+        elif "comment" in payload:
+            # Add single comment
+            new_cmt = payload["comment"]
+            existing_comments.append(new_cmt)
+            database.update_item("posts", post_id, {"comments": existing_comments})
+            return 200, {"success": True, "comments": existing_comments}
+        
+        return 400, {"error": "Invalid payload"}
+
     return 404, {"error": "Post Route not found"}
 
