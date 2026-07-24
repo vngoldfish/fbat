@@ -1834,6 +1834,10 @@ async function _executePostItem(post) {
             mediaUrl: post.mediaUrl || "",
             mediaData: post.mediaData || null,
             targetUrl: post.targetUrl || "",
+            targetType: post.targetType || "profile",
+            targetId: post.targetId || "",
+            actorId: post.actorId || "",
+            seedingComments: post.seedingComments || [],
             timestamp: Date.now()
         };
 
@@ -2252,28 +2256,61 @@ async function _executePostItem(post) {
                     if (payload.seedingComments && Array.isArray(payload.seedingComments) && payload.seedingComments.length > 0) {
                         await updateStep(`💬 Đang tự động gửi ${payload.seedingComments.length} bình luận seeding...`);
                         try {
-                            await chrome.scripting.executeScript({
+                            const seedingResults = await chrome.scripting.executeScript({
                                 target: { tabId: targetTab.id },
                                 world: "MAIN",
                                 func: async (postId, comments, fallbackActorId) => {
                                     let fb_dtsg = "";
                                     let lsd = "";
                                     const html = document.documentElement.innerHTML;
-                                    const dM = html.match(/"DTSGInitialData"[^}]*"token":"([^"]+)"/) || html.match(/"token":"([^"]{20,})"/);
-                                    if (dM) fb_dtsg = dM[1];
-                                    const lM = html.match(/"LSD"[^}]*"token":"([^"]+)"/) || html.match(/"lsd":"([^"]+)"/);
-                                    if (lM) lsd = lM[1];
+
+                                    const dtsgPatterns = [
+                                        /\["DTSGInitialData",\[\],\{"token":"([^"]+)"/,
+                                        /\["DTSGInitData",\[\],\{"token":"([^"]+)"/,
+                                        /"DTSGInitialData"[^}]*"token":"([^"]+)"/,
+                                        /"dtsg":\{"token":"([^"]+)"/,
+                                        /name="fb_dtsg"[^>]*value="([^"]+)"/,
+                                        /"token":"([^"]{20,})","async_get_token"/,
+                                    ];
+                                    for (const p of dtsgPatterns) {
+                                        const m = html.match(p);
+                                        if (m && m[1]) { fb_dtsg = m[1]; break; }
+                                    }
+
+                                    if (!fb_dtsg && typeof require !== "undefined") {
+                                        try {
+                                            const mod = require("DTSGInitData") || require("DTSGInitialData");
+                                            if (mod && mod.token) fb_dtsg = mod.token;
+                                        } catch(e) {}
+                                    }
+
+                                    const lsdPatterns = [
+                                        /\["LSD",\[\],\{"token":"([^"]+)"/,
+                                        /name="lsd"[^>]*value="([^"]+)"/,
+                                        /"lsd":"([^"]+)"/,
+                                    ];
+                                    for (const p of lsdPatterns) {
+                                        const m = html.match(p);
+                                        if (m && m[1]) { lsd = m[1]; break; }
+                                    }
+
                                     const cUserMatch = document.cookie.match(/c_user=(\d+)/);
                                     const actorId = cUserMatch ? cUserMatch[1] : fallbackActorId;
 
-                                    if (!fb_dtsg || !actorId || !postId) return;
+                                    if (!fb_dtsg || !actorId || !postId) {
+                                        return { success: false, error: "Missing tokens or postId", fb_dtsg: !!fb_dtsg, actorId: !!actorId, postId: !!postId };
+                                    }
+
+                                    const feedbackId = btoa("feedback:" + postId);
+                                    let successCount = 0;
+                                    const errors = [];
 
                                     for (const commentText of comments) {
                                         if (!commentText || !commentText.trim()) continue;
                                         try {
                                             const vars = {
                                                 input: {
-                                                    feedback_id: btoa("feedback:" + postId),
+                                                    feedback_id: feedbackId,
                                                     message: { text: commentText.trim() },
                                                     actor_id: actorId,
                                                     client_mutation_id: String(Date.now())
@@ -2290,19 +2327,34 @@ async function _executePostItem(post) {
                                             params.append("variables", JSON.stringify(vars));
                                             params.append("doc_id", "5384620808298758");
 
-                                            await fetch("/api/graphql/", {
+                                            const res = await fetch("https://www.facebook.com/api/graphql/", {
                                                 method: "POST",
                                                 headers: { "Content-Type": "application/x-www-form-urlencoded" },
                                                 body: params.toString(),
                                                 credentials: "include"
                                             });
+                                            const text = await res.text();
+                                            const json = JSON.parse(text.replace("for (;;);", ""));
+                                            if (json.data && (json.data.comment_create || json.data.comment)) {
+                                                successCount++;
+                                            } else if (json.errors) {
+                                                errors.push(json.errors[0]?.message || "GraphQL error");
+                                            } else {
+                                                successCount++;
+                                            }
                                             await new Promise(r => setTimeout(r, 1200));
-                                        } catch(e) {}
+                                        } catch(e) {
+                                            errors.push(e.message);
+                                        }
                                     }
+                                    return { success: successCount > 0, successCount, total: comments.length, errors };
                                 },
                                 args: [pid, payload.seedingComments, fallbackActorId]
                             });
-                        } catch(e) {}
+                            console.log("💬 [Seeding Comments Result]:", seedingResults?.[0]?.result);
+                        } catch(e) {
+                            console.warn("⚠️ [Seeding Comments Error]:", e.message);
+                        }
                     }
                     
                     await updateStep(`🎉 4/4: Đã đăng bài viết thành công qua Direct GraphQL API!${pid ? ' ID: ' + pid : ''}`);
