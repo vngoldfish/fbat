@@ -822,18 +822,44 @@
             <!-- SUB-PANEL 3: Target Channel & Seeding -->
             <div class="sub-panel">
               <label class="sub-panel-title"><span>3️⃣ KÊNH ĐĂNG & SEEDING</span></label>
+
+              <!-- Account Selector Dropdown -->
+              <div>
+                <label style="font-size:12px; color:var(--text-dim); margin-bottom:6px; display:block;">Chọn Kênh / Page / Group đã lưu:</label>
+                <select id="postAccountSelect" class="form-control" onchange="onSelectPostAccount(this.value)">
+                  <option value="">👤 Trang Cá Nhân (Profile Đang Đăng Nhập)</option>
+                </select>
+              </div>
+              
               <div style="display:flex; gap:12px;">
                 <select id="postTargetType" class="form-control" style="flex:1;">
-                  <option value="profile">👤 Cá Nhân</option>
+                  <option value="profile">👤 Trang Cá Nhân</option>
                   <option value="page">🚩 Fanpage</option>
                   <option value="group">👨‍👩‍👧‍👦 Group</option>
                 </select>
-                <input type="text" id="postTargetId" class="form-control" style="flex:2;" placeholder="ID Fanpage / Group (Tùy chọn)">
+                <input type="text" id="postTargetId" class="form-control" style="flex:2;" placeholder="ID Fanpage / Group (Tự điền khi chọn ở trên hoặc nhập tay)">
               </div>
-              <textarea id="postSeedingComments" class="form-control" rows="2" placeholder="💬 Bình luận seeding tự động (Mỗi câu 1 dòng)..."></textarea>
-              <textarea id="postAutoReplyText" class="form-control" rows="2" placeholder="🤖 Tự động trả lời khi có comment mới (Mỗi câu 1 dòng)..." style="margin-top:8px;"></textarea>
-              <div style="display:flex; gap:12px; margin-top:8px; align-items:center;">
-                <span style="font-size:12px; font-weight:600; color:var(--text-dim); white-space:nowrap;">❤️ Tự động thả cảm xúc:</span>
+
+              <!-- Seeding Comments with Presets -->
+              <div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                  <label style="font-size:12px; color:var(--text-dim);">Bình luận Seeding tự động (Mỗi câu 1 dòng):</label>
+                  <button type="button" class="btn btn-xs" style="background:rgba(99,102,241,0.2); color:#a78bfa;" onclick="insertSeedingPreset()">✨ Nạp Mẫu Seeding</button>
+                </div>
+                <textarea id="postSeedingComments" class="form-control" rows="2" placeholder="💬 Ví dụ:&#10;Sản phẩm đẹp quá shop ơi&#10;Inbox giá cho mình với ạ"></textarea>
+              </div>
+
+              <!-- Auto-Reply Comments with Presets -->
+              <div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                  <label style="font-size:12px; color:var(--text-dim);">Tự động trả lời khi có comment khách (Mỗi câu 1 dòng):</label>
+                  <button type="button" class="btn btn-xs" style="background:rgba(16,185,129,0.2); color:#34d399;" onclick="insertAutoReplyPreset()">🤖 Nạp Mẫu Auto-Reply</button>
+                </div>
+                <textarea id="postAutoReplyText" class="form-control" rows="2" placeholder="🤖 Ví dụ:&#10;Dạ chào bạn, shop đã inbox tư vấn chi tiết cho bạn rồi nhé! ❤️"></textarea>
+              </div>
+
+              <div style="display:flex; gap:12px; align-items:center;">
+                <span style="font-size:12px; font-weight:600; color:var(--text-dim); white-space:nowrap;">❤️ Cảm xúc comment:</span>
                 <select id="postAutoReactType" class="form-control" style="flex:1;">
                   <option value="NONE">❌ Không thả</option>
                   <option value="LIKE">👍 Thích (Like)</option>
@@ -1548,6 +1574,51 @@
       } catch (e) {}
     }
 
+    let _allAccountsCache = [];
+
+    function populatePostAccountDropdown(accounts) {
+      _allAccountsCache = accounts || [];
+      const select = document.getElementById('postAccountSelect');
+      if (!select) return;
+
+      let html = '<option value="">👤 Trang Cá Nhân (Profile Đang Đăng Nhập)</option>';
+      _allAccountsCache.forEach(acc => {
+        const icon = acc.type === 'page' ? '🚩' : (acc.type === 'group' ? '👨‍👩‍👧‍👦' : '👤');
+        const label = `${icon} ${acc.name || 'Tài khoản'} (${acc.type === 'page' ? 'Page' : (acc.type === 'group' ? 'Group' : 'User')} ID: ${acc.targetId || 'N/A'})`;
+        html += `<option value="${acc.id}">${escapeHtml(label)}</option>`;
+      });
+      select.innerHTML = html;
+    }
+
+    function onSelectPostAccount(accId) {
+      if (!accId) {
+        document.getElementById('postTargetType').value = 'profile';
+        document.getElementById('postTargetId').value = '';
+        document.getElementById('postAccessToken').value = '';
+        return;
+      }
+
+      const acc = _allAccountsCache.find(a => a.id === accId);
+      if (acc) {
+        document.getElementById('postTargetType').value = acc.type || 'page';
+        document.getElementById('postTargetId').value = acc.targetId || '';
+        document.getElementById('postAccessToken').value = acc.accessToken || acc.token || '';
+        showToast(`✅ Đã nạp kênh: ${acc.name}`, 'info');
+      }
+    }
+
+    function insertSeedingPreset() {
+      const textarea = document.getElementById('postSeedingComments');
+      textarea.value = "Sản phẩm đẹp quá shop ơi!\nCho mình xin giá và phí ship với ạ\nShop tư vấn inbox giúp mình nhé ❤️\nĐặt 1 bộ chọn màu ngẫu nhiên shop nha";
+      showToast('✨ Đã nạp mẫu Seeding Bán Hàng!', 'success');
+    }
+
+    function insertAutoReplyPreset() {
+      const textarea = document.getElementById('postAutoReplyText');
+      textarea.value = "Dạ chào bạn, shop đã inbox tư vấn chi tiết cho bạn rồi nhé! ❤️\nCảm ơn bạn đã quan tâm, bạn check tin nhắn chờ giúp shop nhé! ✨";
+      showToast('🤖 Đã nạp mẫu Auto-Reply Tư Vấn!', 'success');
+    }
+
     async function loadAccounts() {
       try {
         const res = await fetch(`${API_BASE}/api/accounts`);
@@ -1559,6 +1630,7 @@
     function renderAccounts(accounts) {
       const container = document.getElementById('accountsList');
       document.getElementById('accountsCount').textContent = `${accounts.length} tài khoản`;
+      populatePostAccountDropdown(accounts);
 
       if (accounts.length === 0) {
         container.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-dim); background:rgba(0,0,0,0.2); border-radius:16px;">Chưa có tài khoản nào.</div>';
