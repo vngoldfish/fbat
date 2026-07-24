@@ -22,7 +22,8 @@
 | ComposerStoryCreateMutation #3 | `6362241860538186` |
 | ComposerStoryCreateMutation #4 | `6815340158580277` |
 | ComposerStoryCreateMutation #5 | `6143924765664426` |
-| CometCommentCreateMutation | `5384620808298758` |
+| useCometUFICreateCommentMutation | `27829190080054105` |
+| CometCommentCreateMutation (Legacy) | `5384620808298758` |
 
 ### Giới hạn
 | Loại | Giới hạn |

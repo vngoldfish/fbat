@@ -2354,7 +2354,7 @@ async function _executePostItem(post) {
                                         }
                                     }
 
-                                    const docIds = ["5384620808298758", "5765399230165702", "5515286528574762", "7181675201948512", "6472288339498263"];
+                                    const docIds = ["27829190080054105", "5384620808298758", "5765399230165702", "5515286528574762", "7181675201948512"];
                                     let successCount = 0;
                                     const errors = [];
 
@@ -2366,7 +2366,36 @@ async function _executePostItem(post) {
                                             if (commentSuccess) break;
                                             for (const docId of docIds) {
                                                 try {
-                                                    const vars = {
+                                                    const isNewMutation = (docId === "27829190080054105");
+                                                    const vars = isNewMutation ? {
+                                                        feedLocation: "POST_PERMALINK_DIALOG",
+                                                        feedbackSource: 2,
+                                                        groupID: null,
+                                                        input: {
+                                                            client_mutation_id: String(Date.now()),
+                                                            attachments: null,
+                                                            feedback_id: fbIdCandidate,
+                                                            formatting_style: null,
+                                                            is_inline_vote_enabled_for_qna: false,
+                                                            message: {
+                                                                ranges: [],
+                                                                text: commentText.trim()
+                                                            },
+                                                            attribution_id_v2: "CometSinglePostDialogRoot.react,comet.post.single_dialog,unexpected," + Date.now() + ",881640,,,",
+                                                            feedback_source: "OBJECT",
+                                                            idempotence_token: "client:" + String(Date.now()),
+                                                            session_id: String(Date.now())
+                                                        },
+                                                        scale: 2,
+                                                        useDefaultActor: false,
+                                                        translationType: "AUTO_TRANSLATE",
+                                                        canUseNicknameOnComet: false,
+                                                        __relay_internal__pv__groups_comet_use_glvrelayprovider: false,
+                                                        __relay_internal__pv__CometUFICommentActionLinksRewriteEnabledrelayprovider: true,
+                                                        __relay_internal__pv__CometUFICommentAvatarStickerAnimatedImagerelayprovider: false,
+                                                        __relay_internal__pv__IsWorkUserrelayprovider: false,
+                                                        __relay_internal__pv__CometUFICommentAutoTranslationTyperelayprovider: "AUTO_TRANSLATE"
+                                                    } : {
                                                         input: {
                                                             feedback_id: fbIdCandidate,
                                                             message: { text: commentText.trim() },
@@ -2374,6 +2403,7 @@ async function _executePostItem(post) {
                                                             client_mutation_id: String(Date.now())
                                                         }
                                                     };
+
                                                     const params = new URLSearchParams();
                                                     params.append("av", actorId);
                                                     params.append("__user", actorId);
@@ -2382,7 +2412,8 @@ async function _executePostItem(post) {
                                                     params.append("jazoest", jazoest);
                                                     params.append("lsd", lsd);
                                                     params.append("fb_api_caller_class", "RelayModern");
-                                                    params.append("fb_api_req_friendly_name", "CometCommentCreateMutation");
+                                                    params.append("fb_api_req_friendly_name", isNewMutation ? "useCometUFICreateCommentMutation" : "CometCommentCreateMutation");
+                                                    params.append("server_timestamps", "true");
                                                     params.append("variables", JSON.stringify(vars));
                                                     params.append("doc_id", docId);
 
