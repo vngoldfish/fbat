@@ -17,7 +17,7 @@ def handle_posts_route(path: str, method: str, body: dict = None, query: dict = 
         return 200, {"posts": posts, "total": len(posts)}
 
     # GET /api/posts/<id>
-    if path.startswith("/api/posts/") and not path.endswith("/run-now") and method == "GET":
+    if path.startswith("/api/posts/") and not path.endswith("/run-now") and not path.endswith("/comments") and method == "GET":
         parts = [p for p in path.split('/') if p]
         post_id = parts[2] if len(parts) > 2 else ""
         posts = database.get_collection("posts")
