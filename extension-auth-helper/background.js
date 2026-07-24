@@ -94,10 +94,9 @@ chrome.alarms.create("keepAlive", { periodInMinutes: 0.4 });
 chrome.alarms.create("heartbeat", { periodInMinutes: 0.25 });  
 chrome.alarms.create("grokKeepAlive", { periodInMinutes: 1.0 });  
 chrome.alarms.create("autoPostCheck", { periodInMinutes: 0.05 });
-chrome.alarms.create("autoReplyCheck", { periodInMinutes: 0.2 });
+chrome.alarms.create("autoReplyCheck", { periodInMinutes: 1.0 });
 setInterval(() => {
     _processScheduledPosts().catch(() => {});
-    _processAutoReplyMonitor().catch(() => {});
 }, 15000);
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
@@ -3085,17 +3084,39 @@ async function _processAutoReplyMonitor() {
                             });
 
                             const text = await res.text();
-                            const commentMatches = text.matchAll(/"legacy_fbid"\s*:\s*"(\d+)"/g);
-                            const foundCommentIds = [];
-                            for (const cm of commentMatches) {
-                                if (cm[1] && cm[1] !== storyId && !foundCommentIds.includes(cm[1])) {
-                                    foundCommentIds.push(cm[1]);
-                                }
+                            const lines = text.split("\n");
+                            const foundCommentsToReply = [];
+
+                            for (const line of lines) {
+                                if (!line.includes('"legacy_fbid"')) continue;
+                                try {
+                                    const parsed = JSON.parse(line.replace(/^for\s*\([^)]*\);?/, ""));
+                                    
+                                    function scanComments(obj) {
+                                        if (!obj || typeof obj !== "object") return;
+                                        if (obj.legacy_fbid) {
+                                            const cmtId = String(obj.legacy_fbid);
+                                            const authId = obj.author ? String(obj.author.id || "") : "";
+                                            
+                                            // CRITICAL FILTER: Never reply to own post ID or own account's comments!
+                                            if (cmtId !== storyId && authId && authId !== actorId) {
+                                                if (!foundCommentsToReply.includes(cmtId)) {
+                                                    foundCommentsToReply.push(cmtId);
+                                                }
+                                            }
+                                        }
+                                        for (const key of Object.keys(obj)) {
+                                            scanComments(obj[key]);
+                                        }
+                                    }
+                                    scanComments(parsed);
+                                } catch(e) {}
                             }
 
-                            for (const commentId of foundCommentIds) {
+                            for (const commentId of foundCommentsToReply) {
                                 const commentHash = "cmt_" + storyId + "_" + commentId;
                                 if (repliedSet.has(commentHash)) continue;
+                                newlyReplied.push(commentHash); // Mark immediately
 
                                 const commentFeedbackId = btoa("feedback:" + storyId + "_" + commentId);
                                 const parentCommentFbid = btoa("comment:" + storyId + "_" + commentId);
