@@ -1072,6 +1072,10 @@
   </div>
 
   <script>
+    const API_BASE = (window.location.protocol && window.location.protocol.startsWith('http')) 
+      ? (window.location.origin || (window.location.protocol + '//' + window.location.host)) 
+      : 'http://127.0.0.1:18923';
+
     document.addEventListener('DOMContentLoaded', () => {
       initTabs();
       setDefaultDateTime();
@@ -1136,9 +1140,6 @@
       setPresetSchedule(5);
     }
 
-    const API_BASE = (window.location.protocol && window.location.protocol.startsWith('http')) 
-      ? (window.location.origin || (window.location.protocol + '//' + window.location.host)) 
-      : 'http://127.0.0.1:18923';
     let _allPostsCache = [];
     let _lastPostsHash = "";
     let _searchTimeout = null;
