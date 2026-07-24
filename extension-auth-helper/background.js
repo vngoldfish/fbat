@@ -2609,77 +2609,23 @@ async function _executePostItem(post) {
                     return { success: true, method: "graphql", fbPostId: pid, fbPostUrl: purl };
                 }
 
-                console.warn(`⚠️ [Background] TIER 1 HAR FAILED:`, graphqlResult?.error);
+                const graphqlErrMsg = graphqlResult?.error || "Direct GraphQL API failed to publish story";
+                console.warn(`❌ [Background] Direct GraphQL API FAILED:`, graphqlErrMsg);
+                await updateStep(`❌ 4/4: ${graphqlErrMsg}`);
+                return { success: false, error: graphqlErrMsg, method: "pure_graphql" };
+
             } catch (graphqlErr) {
-                console.warn(`⚠️ [Background] TIER 1 HAR ERROR:`, graphqlErr.message);
+                console.warn(`❌ [Background] Direct GraphQL API ERROR:`, graphqlErr.message);
+                await updateStep(`❌ 4/4: ${graphqlErr.message}`);
+                return { success: false, error: graphqlErr.message, method: "pure_graphql" };
             }
         }
 
-        // ===================================================================
-        // TIER 2: DOM Automation Fallback (Running if GraphQL fails)
-        // ===================================================================
-        await updateStep(`🌐 3/4: GraphQL API bận, đang chuyển sang Tự động hóa Giao diện (DOM Fallback)...`);
-        console.log(`🌐 [Background] Falling back to TIER 2 DOM Automation for post ${post.id}`);
-
-        try {
-            const domResults = await chrome.scripting.executeScript({
-                target: { tabId: targetTab.id },
-                world: "MAIN",
-                func: async (postContent, postType, targetType, targetId) => {
-                    try {
-                        // Open post composer modal if not open
-                        const composerTrigger = document.querySelector('div[role="button"][aria-label*="Bạn đang nghĩ gì"], div[role="button"][aria-label*="What\'s on your mind"], div[role="button"][aria-label*="Tạo bài viết"]');
-                        if (composerTrigger) {
-                            composerTrigger.click();
-                            await new Promise(r => setTimeout(r, 1200));
-                        }
-
-                        const dialog = document.querySelector('div[role="dialog"]');
-                        const textbox = (dialog ? dialog.querySelector('div[role="textbox"]') : null) || document.querySelector('div[role="textbox"]');
-                        if (!textbox) {
-                            return { success: false, error: "Không tìm thấy khung nhập nội dung bài viết trên giao diện" };
-                        }
-
-                        textbox.focus();
-                        document.execCommand("insertText", false, postContent || "");
-                        textbox.dispatchEvent(new Event("input", { bubbles: true }));
-                        await new Promise(r => setTimeout(r, 1000));
-
-                        // Find Submit "Đăng" / "Post" button
-                        const allBtns = Array.from((dialog || document).querySelectorAll('div[role="button"], button'));
-                        const postBtn = allBtns.find(b => {
-                            const txt = (b.innerText || b.getAttribute("aria-label") || "").trim().toLowerCase();
-                            return (txt === "đăng" || txt === "post" || txt === "tiếp tục" || txt === "next") && !b.disabled;
-                        });
-
-                        if (!postBtn) {
-                            return { success: false, error: "Không tìm thấy nút Đăng bài trên giao diện" };
-                        }
-
-                        postBtn.click();
-                        await new Promise(r => setTimeout(r, 3000));
-
-                        return { success: true, method: "dom_fallback" };
-                    } catch(e) {
-                        return { success: false, error: e.message };
-                    }
-                },
-                args: [payload.content, postType, payload.targetType || "profile", payload.targetId || ""]
-            });
-
-            const domResult = domResults?.[0]?.result;
-            if (domResult && domResult.success) {
-                await updateStep(`🎉 4/4: Đã đăng bài viết thành công qua DOM Fallback Automation!`);
-                return { success: true, method: "dom_fallback" };
-            }
-        } catch(domErr) {}
-
         const errMsg = hasMedia && !uploadedMediaId 
-            ? "Upload media thất bại và GraphQL API không thành công. Vui lòng thử lại."
-            : "Đăng bài thất bại. Vui lòng kiểm tra kết nối Facebook và thử lại.";
+            ? "Upload media thất bại và GraphQL API không thành công."
+            : "GraphQL API thất bại. Vui lòng kiểm tra kết nối Facebook và thử lại.";
         await updateStep(`❌ 4/4: ${errMsg}`);
-        console.warn(`❌ [Background] Post ${post.id} failed — All posting tiers failed.`);
-        return { success: false, error: errMsg, method: "failed" };
+        return { success: false, error: errMsg, method: "pure_graphql" };
 
     } catch (e) {
         return { success: false, error: e.message };
