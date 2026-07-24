@@ -2983,10 +2983,7 @@ async function _processAutoReplyMonitor() {
         const data = await res.json();
         const posts = data.posts || [];
 
-        const monitorPosts = posts.filter(p => 
-            (p.autoReplyComments && Array.isArray(p.autoReplyComments) && p.autoReplyComments.length > 0) ||
-            (p.autoReactType && p.autoReactType !== "NONE")
-        );
+        const monitorPosts = posts.filter(p => p.fbPostId || (p.fbPostUrl && p.fbPostUrl.includes("facebook.com")));
 
         if (monitorPosts.length === 0) { _autoReplyRunning = false; return; }
 
@@ -2994,8 +2991,7 @@ async function _processAutoReplyMonitor() {
         let fbTab = tabs.find(t => t.url && t.url.includes("facebook.com"));
         if (!fbTab) { _autoReplyRunning = false; return; }
 
-        const storage = await chrome.storage.local.get(["repliedCommentIds"]);
-        const repliedCommentIds = new Set(storage.repliedCommentIds || []);
+        const repliedCommentIds = await _getRepliedCommentIds();
 
         for (const post of monitorPosts) {
             const postId = post.fbPostId || post.id;
