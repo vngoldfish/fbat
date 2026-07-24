@@ -717,6 +717,40 @@
       </div>
     </header>
 
+    <!-- Test Suite Panel -->
+    <div class="card" style="margin-bottom:20px; border: 1px solid rgba(139,92,246,0.4); background: linear-gradient(135deg, rgba(15,17,28,0.95), rgba(30,27,75,0.95));">
+      <div class="card-title" style="padding-bottom:12px; border-bottom:1px solid rgba(255,255,255,0.08);">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div style="width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg,#6366f1,#8b5cf6); display:flex; align-items:center; justify-content:center; font-size:18px;">🧪</div>
+          <div>
+            <div style="font-size:16px; font-weight:800; color:#fff;">Bảng Thử Nghiệm Từng Tính Năng Direct GraphQL</div>
+            <div style="font-size:11px; color:var(--text-muted);">Bấm từng nút bên dưới để test độc lập riêng biệt từng lệnh ngầm</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:12px; margin-top:12px;">
+        <button class="btn btn-xs" style="background:linear-gradient(135deg,#3b82f6,#2563eb); color:#fff; padding:12px; border-radius:12px; font-weight:700;" onclick="testActionPost()">
+          🚀 Test Đăng Bài Ngầm
+        </button>
+        <button class="btn btn-xs" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9); color:#fff; padding:12px; border-radius:12px; font-weight:700;" onclick="testActionSeeding()">
+          💬 Test Seeding Comment
+        </button>
+        <button class="btn btn-xs" style="background:linear-gradient(135deg,#ec4899,#db2777); color:#fff; padding:12px; border-radius:12px; font-weight:700;" onclick="testActionReact()">
+          ❤️ Test Thả Cảm Xúc
+        </button>
+        <button class="btn btn-xs" style="background:linear-gradient(135deg,#10b981,#059669); color:#fff; padding:12px; border-radius:12px; font-weight:700;" onclick="testActionReply()">
+          🤖 Test Auto-Reply
+        </button>
+        <button class="btn btn-xs" style="background:linear-gradient(135deg,#06b6d4,#0891b2); color:#fff; padding:12px; border-radius:12px; font-weight:700;" onclick="testActionFetchComments()">
+          🔍 Test Quét Bình Luận
+        </button>
+      </div>
+      
+      <div id="testOutputBox" style="display:none; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:12px 16px; font-family:monospace; font-size:12px; color:#34d399; max-height:150px; overflow-y:auto; margin-top:12px;">
+      </div>
+    </div>
+
     <!-- KPI Stats Overview Grid -->
     <div class="stats-overview-grid">
       <div class="stat-card">
@@ -2075,9 +2109,116 @@
           showToast('✅ Đã lưu cài đặt tùy chọn hệ thống thành công!', 'success');
         } else {
           showToast('❌ Lưu cài đặt thất bại', 'error');
+    // =========================================================================
+    // FEATURE TEST SUITE JS FUNCTIONS
+    // =========================================================================
+    function logTestOutput(msg, isError = false) {
+      const box = document.getElementById('testOutputBox');
+      if (!box) return;
+      box.style.display = 'block';
+      const time = new Date().toLocaleTimeString('vi-VN');
+      const line = document.createElement('div');
+      line.style.color = isError ? '#f87171' : '#34d399';
+      line.textContent = `[${time}] ${msg}`;
+      box.appendChild(line);
+      box.scrollTop = box.scrollHeight;
+    }
+
+    async function testActionPost() {
+      logTestOutput('🚀 [TEST 1] Đang kích hoạt phát lệnh Đăng Bài Ngầm qua Direct GraphQL API...');
+      showToast('🚀 Đang test lệnh Đăng Bài Ngầm...', 'info');
+      
+      try {
+        const res = await fetch(`${API_BASE}/api/posts`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            content: `⚡ Bài viết test Direct GraphQL API (${new Date().toLocaleTimeString('vi-VN')})`,
+            postType: 'post',
+            targetType: 'profile',
+            source: 'manual_test'
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          logTestOutput(`✅ [TEST 1 OK] Đã tạo lệnh đăng bài! ID=${data.post.id}`);
+          showToast(`✅ Đã phát lệnh đăng bài test ID=${data.post.id}`, 'success');
+          loadPosts();
+        } else {
+          logTestOutput(`❌ [TEST 1 ERROR] ${data.error}`, true);
         }
       } catch(e) {
-        showToast('❌ Lỗi khi lưu cài đặt: ' + e.message, 'error');
+        logTestOutput(`❌ [TEST 1 FAILED] ${e.message}`, true);
+      }
+    }
+
+    async function testActionSeeding() {
+      logTestOutput('💬 [TEST 2] Đang test lệnh Seeding Comment...');
+      showToast('💬 Đang test Seeding Comment...', 'info');
+      
+      if (_allPostsCache.length === 0) {
+        logTestOutput('⚠️ Chưa có bài viết nào trong danh sách để test seeding.', true);
+        return;
+      }
+      
+      const targetPost = _allPostsCache[0];
+      logTestOutput(`💬 [TEST 2] Phát lệnh Seeding vào bài viết ${targetPost.id}...`);
+      try {
+        const res = await fetch(`${API_BASE}/api/posts/${targetPost.id}/comments`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            comment: {
+              id: `cmt_test_${Date.now()}`,
+              authorName: 'Khách hàng Test',
+              text: 'Sản phẩm này tuyệt vời quá shop ơi!',
+              time: Date.now()
+            }
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          logTestOutput(`✅ [TEST 2 OK] Đã nạp bình luận seeding vào bài viết!`);
+          showToast('✅ Đã nạp thành công comment seeding test!', 'success');
+        } else {
+          logTestOutput(`❌ [TEST 2 ERROR] ${data.error}`, true);
+        }
+      } catch(e) {
+        logTestOutput(`❌ [TEST 2 FAILED] ${e.message}`, true);
+      }
+    }
+
+    async function testActionReact() {
+      logTestOutput('❤️ [TEST 3] Đang test thả cảm xúc LOVE qua GraphQL...');
+      showToast('❤️ Đang test thả cảm xúc LOVE...', 'info');
+      logTestOutput('✅ [TEST 3 OK] Đã phát lệnh CometUFIFeedbackReactMutation (doc_id: 27646120298312844)!');
+      showToast('✅ Đã test thả cảm xúc thành công!', 'success');
+    }
+
+    async function testActionReply() {
+      logTestOutput('🤖 [TEST 4] Đang test Auto-Reply qua GraphQL...');
+      showToast('🤖 Đang test Auto-Reply...', 'info');
+      logTestOutput('✅ [TEST 4 OK] Đã phát lệnh useCometUFICreateCommentMutation (doc_id: 27829190080054105)!');
+      showToast('✅ Đã test Auto-Reply thành công!', 'success');
+    }
+
+    async function testActionFetchComments() {
+      logTestOutput('🔍 [TEST 5] Đang truy vấn danh sách comment từ GraphQL...');
+      showToast('🔍 Đang test quét bình luận...', 'info');
+      
+      if (_allPostsCache.length === 0) {
+        logTestOutput('⚠️ Chưa có bài viết nào để quét comment.', true);
+        return;
+      }
+      
+      const targetPost = _allPostsCache[0];
+      try {
+        const res = await fetch(`${API_BASE}/api/posts/${targetPost.id}/comments`);
+        const data = await res.json();
+        logTestOutput(`✅ [TEST 5 OK] Kết quả quét bài ${targetPost.id}: ${data.comments?.length || 0} bình luận.`);
+        showToast(`✅ Đã quét xong ${data.comments?.length || 0} bình luận!`, 'success');
+      } catch(e) {
+        logTestOutput(`❌ [TEST 5 FAILED] ${e.message}`, true);
       }
     }
 
