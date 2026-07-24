@@ -3003,6 +3003,13 @@ async function _processAutoReplyMonitor() {
             const autoReplyTexts = post.autoReplyComments || [];
             const autoReactType = post.autoReactType || "NONE";
 
+            if (post.fbPostUrl && post.fbPostUrl.includes("facebook.com")) {
+                try {
+                    await chrome.tabs.update(fbTab.id, { url: post.fbPostUrl, active: false });
+                    await new Promise(r => setTimeout(r, 2500));
+                } catch(e) {}
+            }
+
             try {
                 const results = await chrome.scripting.executeScript({
                     target: { tabId: fbTab.id },
