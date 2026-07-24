@@ -16,6 +16,16 @@ def handle_posts_route(path: str, method: str, body: dict = None, query: dict = 
             posts = [p for p in posts if p.get("postType") == post_type]
         return 200, {"posts": posts, "total": len(posts)}
 
+    # GET /api/posts/<id>
+    if path.startswith("/api/posts/") and not path.endswith("/run-now") and method == "GET":
+        parts = [p for p in path.split('/') if p]
+        post_id = parts[2] if len(parts) > 2 else ""
+        posts = database.get_collection("posts")
+        found = next((p for p in posts if p.get("id") == post_id), None)
+        if found:
+            return 200, {"success": True, "post": found}
+        return 404, {"error": "Post not found"}
+
     # POST /api/posts
     if path == "/api/posts" and method == "POST":
         payload = body or {}
