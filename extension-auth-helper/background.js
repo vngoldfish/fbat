@@ -2420,17 +2420,59 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
         _extractFacebookAccessToken().catch(() => {});
     }
 });
+setTimeout(() => { _extractFacebookAccessToken().catch(() => {}); }, 3000);
 
-// Periodic auto extraction run on startup
-setTimeout(() => {
-    _extractFacebookAccessToken().catch(() => {});
-}, 3000);
+// ============================================================
+// INTERCEPTED DATA HANDLER: Receives real-time FB data from content scripts
+// ============================================================
+let _interceptedBatch = new Map(); // postId -> data
+let _interceptPushTimer = null;
+const _INTERCEPT_PUSH_INTERVAL = 10000; // Push to backend every 10s
+
+async function _handleInterceptedData(items) {
+    for (const item of items) {
+        if (item.postId && item.metrics) {
+            _interceptedBatch.set(item.postId, item);
+        }
+    }
+    // Schedule push if not already scheduled
+    if (!_interceptPushTimer && _interceptedBatch.size > 0) {
+        _interceptPushTimer = setTimeout(_pushInterceptedData, _INTERCEPT_PUSH_INTERVAL);
+    }
+}
+
+async function _pushInterceptedData() {
+    _interceptPushTimer = null;
+    if (_interceptedBatch.size === 0) return;
+    const posts = Array.from(_interceptedBatch.values());
+    _interceptedBatch.clear();
+    try {
+        await fetch(`${_syncUrl}/api/realtime-data`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ posts, timestamp: Date.now() }),
+            signal: AbortSignal.timeout(5000)
+        });
+    } catch(e) { /* backend not running, ignore */ }
+}
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message.type === "FETCH_FB_TOKEN") {
         _extractFacebookAccessToken()
             .then(r => sendResponse(r))
             .catch(e => sendResponse({ success: false, error: e.message }));
+        return true;
+    }
+
+    // Handle real-time intercepted data from fb_interceptor.js → fb_bridge.js
+    if (message.action === "FB_DATA_CAPTURED" && Array.isArray(message.data)) {
+        _handleInterceptedData(message.data).catch(() => {});
+        sendResponse({ ok: true });
+        return true;
+    }
+
+    if (message.action === "FB_PAGE_CHANGED") {
+        sendResponse({ ok: true });
         return true;
     }
 

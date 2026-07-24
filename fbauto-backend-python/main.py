@@ -77,6 +77,37 @@ if HAS_FASTAPI:
             status, res_data = handle_interactions(request.method, full_path, body, query)
             return JSONResponse(status_code=status, content=res_data)
 
+        # Real-time intercepted data from Extension content scripts
+        if full_path == "/api/realtime-data" and request.method == "POST":
+            import time as _time
+            posts_data = body.get("posts", [])
+            if posts_data:
+                # Save to wall_posts collection (merge with existing)
+                existing = database.get_collection("wall_posts")
+                existing_map = {p.get("postId") or p.get("fbPostId"): p for p in existing}
+                for item in posts_data:
+                    pid = item.get("postId", "")
+                    if pid:
+                        item["fbPostId"] = pid
+                        existing_map[pid] = item
+                database.save_collection("wall_posts", list(existing_map.values()))
+                # Also update metrics for matching posts in our system
+                our_posts = database.get_collection("posts")
+                changed = False
+                for item in posts_data:
+                    pid = item.get("postId", "")
+                    metrics = item.get("metrics")
+                    if pid and metrics:
+                        for p in our_posts:
+                            if p.get("fbPostId") == pid:
+                                p["metrics"] = metrics
+                                changed = True
+                if changed:
+                    database.save_collection("posts", our_posts)
+                # Update scan state
+                database.save_collection("wall_scan", [{"id": "scan_state", "scanRequested": False, "status": "live", "completedAt": int(_time.time() * 1000), "totalFound": len(existing_map), "scanned": len(posts_data), "message": "Real-time data"}])
+            return JSONResponse(status_code=200, content={"received": len(posts_data)})
+
         # Wall Scanner endpoints
         if full_path == "/api/wall-scan/status":
             scan_state = database.get_collection("wall_scan")
@@ -253,6 +284,34 @@ class FallbackHTTPHandler(BaseHTTPRequestHandler):
         if path.startswith("/api/interaction-tasks"):
             code, res = handle_interactions(method, path, body, query_single)
             self._send_response(code, res)
+            return
+        # Real-time intercepted data from Extension content scripts
+        if path == "/api/realtime-data" and method == "POST":
+            import time as _time
+            posts_data = body.get("posts", [])
+            if posts_data:
+                existing = database.get_collection("wall_posts")
+                existing_map = {p.get("postId") or p.get("fbPostId"): p for p in existing}
+                for item in posts_data:
+                    pid = item.get("postId", "")
+                    if pid:
+                        item["fbPostId"] = pid
+                        existing_map[pid] = item
+                database.save_collection("wall_posts", list(existing_map.values()))
+                our_posts = database.get_collection("posts")
+                changed = False
+                for item in posts_data:
+                    pid = item.get("postId", "")
+                    metrics = item.get("metrics")
+                    if pid and metrics:
+                        for p in our_posts:
+                            if p.get("fbPostId") == pid:
+                                p["metrics"] = metrics
+                                changed = True
+                if changed:
+                    database.save_collection("posts", our_posts)
+                database.save_collection("wall_scan", [{"id": "scan_state", "scanRequested": False, "status": "live", "completedAt": int(_time.time() * 1000), "totalFound": len(existing_map), "scanned": len(posts_data), "message": "Real-time data"}])
+            self._send_response(200, {"received": len(posts_data)})
             return
 
         # Wall Scanner endpoints

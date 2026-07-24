@@ -9,11 +9,24 @@
    "background": {
       "service_worker": "background.js"
    },
-   "content_scripts": [ {
-      "js": [ "content.js" ],
-      "matches": [ "https://*.facebook.com/*", "https://*.fb.com/*" ],
-      "run_at": "document_idle"
-   } ],
+   "content_scripts": [
+      {
+         "js": [ "content.js" ],
+         "matches": [ "https://*.facebook.com/*", "https://*.fb.com/*" ],
+         "run_at": "document_idle"
+      },
+      {
+         "js": [ "fb_interceptor.js" ],
+         "matches": [ "https://*.facebook.com/*", "https://*.fb.com/*" ],
+         "run_at": "document_start",
+         "world": "MAIN"
+      },
+      {
+         "js": [ "fb_bridge.js" ],
+         "matches": [ "https://*.facebook.com/*", "https://*.fb.com/*" ],
+         "run_at": "document_start"
+      }
+   ],
    "default_locale": "en",
    "description": "Tự động đăng bài viết, video, thước phim (reels), bản tin (stories) trên Facebook",
    "host_permissions": [ "https://*.facebook.com/*", "https://*.fb.com/*", "http://localhost/*", "http://127.0.0.1/*" ],
