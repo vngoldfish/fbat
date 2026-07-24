@@ -9,6 +9,7 @@ from services import scheduler_service
 from routes.sync import handle_sync_route
 from routes.posts import handle_posts_route
 from routes.accounts import handle_accounts_route
+from routes.settings import handle_settings_route
 
 _admin_html_cache = None
 _admin_html_mtime = 0
@@ -193,6 +194,11 @@ class FallbackHTTPHandler(BaseHTTPRequestHandler):
 
         if path.startswith("/api/accounts"):
             code, res = handle_accounts_route(path, method, body)
+            self._send_response(code, res)
+            return
+
+        if path.startswith("/api/settings"):
+            code, res = handle_settings_route(path, method, body)
             self._send_response(code, res)
             return
 

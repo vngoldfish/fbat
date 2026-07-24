@@ -15,7 +15,8 @@ FILES = {
     "tokens": config.TOKENS_FILE,
     "logs": config.LOGS_FILE,
     "targets": os.path.join(config.DATA_DIR, "targets.json"),
-    "accounts": os.path.join(config.DATA_DIR, "accounts.json")
+    "accounts": os.path.join(config.DATA_DIR, "accounts.json"),
+    "settings": os.path.join(config.DATA_DIR, "settings.json")
 }
 
 # Initialize empty JSON files
