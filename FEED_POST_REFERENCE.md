@@ -23,6 +23,8 @@
 | ComposerStoryCreateMutation #4 | `6815340158580277` |
 | ComposerStoryCreateMutation #5 | `6143924765664426` |
 | useCometUFICreateCommentMutation | `27829190080054105` |
+| CometSinglePostDialogContentQuery (Lấy Comment & Reply) | `25494545246909173` |
+| CometUFIFeedbackReactMutation (Thả cảm xúc) | `27646120298312844` |
 | CometCommentCreateMutation (Legacy) | `5384620808298758` |
 
 ### Giới hạn
